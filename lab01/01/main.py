@@ -83,6 +83,8 @@ if __name__ == '__main__':
     b = [18, -12, 6, -12]
 
 
+
+    A = [[23994, 340923, 239492, -12], [1239, 2304, 20, -20], [234, 2342, 23, 0], [0, 1, 0, 4]]
     L, U = LU(A)
 
     print(np.array(L) @ np.array(U))
@@ -95,3 +97,4 @@ if __name__ == '__main__':
     # print(f"Ax = b, x = {x} \n")
     # print(f"detA = {det(A)} \n")
     result = inverse(A)
+
