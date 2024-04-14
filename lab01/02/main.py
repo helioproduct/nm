@@ -53,8 +53,6 @@ def solve(A, d):
 
 
 
-print(np.array(A))
-
-solve(A, b)
-
+result = solve(A, b)
+print(result)
 

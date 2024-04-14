@@ -1,12 +1,13 @@
 import numpy as np
 
+
 def LU(A):
     n = len(A)
     L = [[0.0 if i != j else 1.0 for j in range(n)] for i in range(n)]
     U = A
 
     for k in range(n):
-        for i in range(k+1, n):
+        for i in range(k + 1, n):
             L[i][k] = U[i][k] / U[k][k]
             for j in range(k, n):
                 U[i][j] -= L[i][k] * U[k][j]
@@ -45,16 +46,15 @@ def det(A):
 
     for i in range(n):
         result *= L[i][i]
-    
+
     return result
 
 
 def transpose(A):
-    A_T = [[] for _ in range(len(A[0]))]    
+    A_T = [[] for _ in range(len(A[0]))]
     for i in range(len(A_T)):
         A_T[i].extend([A[j][i] for j in range(len(A))])
     return A_T
-
 
 
 def inverse(A):
@@ -71,30 +71,22 @@ def inverse(A):
     return transpose(inversed)
 
 
-
-
-if __name__ == '__main__':
-
-    
-    A = [[-5, -1, -3, -1], 
-         [-2, 0, 8, -4], 
-         [-7, -2, 2, -2],
-         [2, -4, -4, 4]]
+if __name__ == "__main__":
+    A = [[-5, -1, -3, -1], [-2, 0, 8, -4], [-7, -2, 2, -2], [2, -4, -4, 4]]
     b = [18, -12, 6, -12]
 
-
-
-    A = [[23994, 340923, 239492, -12], [1239, 2304, 20, -20], [234, 2342, 23, 0], [0, 1, 0, 4]]
+    A = [
+        [23994, 340923, 239492, -12],
+        [1239, 2304, 20, -20],
+        [234, 2342, 23, 0],
+        [0, 1, 0, 4],
+    ]
     L, U = LU(A)
 
     print(np.array(L) @ np.array(U))
-    
-
 
     # x = solve_system(A,b)
-
 
     # print(f"Ax = b, x = {x} \n")
     # print(f"detA = {det(A)} \n")
     result = inverse(A)
-
