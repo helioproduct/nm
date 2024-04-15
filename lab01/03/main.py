@@ -40,41 +40,6 @@ def solve_interations(A, b, eps):
     return x_curr, iterations
 
 
-def solve_seidel2(A, b, eps):
-    A = np.array(A)
-    b = np.array(b)
-    n = len(A)
-
-    beta = [0] * n
-    alpha = np.zeros_like(A, dtype=float)
-
-    for i in range(n):
-        for j in range(n):
-            if i == j:
-                alpha[i][j] = 0
-            else:
-                alpha[i][j] = -A[i][j] / A[i][i]
-        beta[i] = b[i] / A[i][i]
-
-    iterations = 0
-    x_curr = [0] * n
-
-    while True:
-        x_prev = copy.deepcopy(x_curr)
-
-        for i in range(n):
-            s1 = sum(alpha[i][j] * x_curr[j] for j in range(i))
-            s2 = sum(alpha[i][j] * x_prev[j] for j in range(i + 1, n))
-            x_curr[i] = beta[i] + s1 + s2
-
-        iterations += 1
-
-        if matrix_norm2([np.array(x_prev) - np.array(x_curr)]) <= eps:
-            break
-
-    return x_curr, iterations
-
-
 def solve_seidel(A, b, eps):
     A = np.array(A)
     b = np.array(b)

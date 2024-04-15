@@ -18,21 +18,20 @@ def LU(A):
 def solve_system(A, b):
     n = len(A)
     L, U = LU(A)
-    # Ly = b
-    y = [0 for _ in range(n)]
+    # Lz = b
+    z = [0 for _ in range(n)]
     for i in range(n):
         s = 0
         for j in range(i):
-            s += L[i][j] * y[j]
-        y[i] = (b[i] - s) / L[i][i]
+            s += L[i][j] * z[j]
+        z[i] = (b[i] - s) / L[i][i]
 
-    # Ux = y
     x = [0 for _ in range(n)]
     for i in range(n - 1, -1, -1):
         s = 0
         for j in range(n - 1, i - 1, -1):
             s += U[i][j] * x[j]
-        x[i] = (y[i] - s) / U[i][i]
+        x[i] = (z[i] - s) / U[i][i]
 
     return x
 
@@ -85,8 +84,13 @@ if __name__ == "__main__":
 
     print(np.array(L) @ np.array(U))
 
-    # x = solve_system(A,b)
+    x = solve_system(A, b)
 
-    # print(f"Ax = b, x = {x} \n")
-    # print(f"detA = {det(A)} \n")
-    result = inverse(A)
+    print(f"Ax = b, x = {x} \n")
+    print(f"detA = {det(A)} \n")
+    # print(np.linalg.det(np.array(A)))
+
+    inversed = inverse(A)
+
+    print("A inversed = ")
+    print(np.array(inversed))
