@@ -50,3 +50,17 @@ for v in eigen_vectors:
     print(v)
 
 print("Число итераций:", iterations)
+
+
+
+# проверка
+# lambda * v
+for v in eigen_vectors:
+    for value in eigen_values:
+        a = [value * x for x in v]
+        print(a)
+
+print()
+
+for v in eigen_vectors:
+    print(A @ v)

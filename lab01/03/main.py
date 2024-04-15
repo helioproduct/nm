@@ -1,6 +1,5 @@
 import numpy as np
 from math import sqrt
-import copy
 
 
 def matrix_norm2(A):
@@ -26,18 +25,28 @@ def solve_interations(A, b, eps):
                 alpha[i][j] = -A[i][j] / A[i][i]
         beta[i] = b[i] / A[i][i]
 
+
     x_curr = beta
     iterations = 0
+    
+    a_norm = matrix_norm2(alpha)
+
 
     while True:
         x_prev = x_curr
         x_curr = beta + alpha @ x_prev
         iterations += 1
 
-        if matrix_norm2([x_prev - x_curr]) <= eps:
+        if a_norm  >= 1:
+            eps_k = matrix_norm2([x_curr - x_prev])
+        else:
+            eps_k = a_norm / (1 - a_norm) *   matrix_norm2([x_curr - x_prev])
+
+        if eps_k <= eps:
             break
 
     return x_curr, iterations
+
 
 
 def solve_seidel(A, b, eps):
@@ -57,18 +66,28 @@ def solve_seidel(A, b, eps):
     x_curr = np.array(beta)
     iterations = 0
 
+    a_norm = matrix_norm2(alpha)
+
+    
     while True:
         x_prev = x_curr.copy()
 
         for i in range(n):
-            s1 = np.dot(alpha[i, :i], x_curr[:i])
-            s2 = np.dot(alpha[i, i + 1 :], x_prev[i + 1 :])
+            s1 = sum(alpha[i][j] * x_curr[j] for j in range(i))
+            s2 = sum(alpha[i][j] * x_prev[j] for j in range(i + 1, n)) 
+            s2 = sum(alpha[i][j] * x_prev[j] for j in range(i + 1, n))
             x_curr[i] = beta[i] + s1 + s2
 
         iterations += 1
+        
+        if a_norm  >= 1:
+            eps_k = matrix_norm2([x_curr - x_prev])
+        else:
+            eps_k = a_norm / (1 - a_norm) *   matrix_norm2([x_curr - x_prev])
 
-        if matrix_norm2([np.array(x_prev) - np.array(x_curr)]) <= eps:
+        if eps_k <= eps:
             break
+            
 
     return x_curr.tolist(), iterations
 
