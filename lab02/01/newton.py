@@ -1,5 +1,4 @@
-# from math import e
-from function import f, f1, f2
+from functions import f, f1, f2
 
 
 def Newton(f, a, b, eps):
@@ -17,13 +16,3 @@ def Newton(f, a, b, eps):
         iterations += 1
 
     return x_next, iterations
-
-
-if __name__ == "__main__":
-
-    # f(x) = 0
-    solution, iterations = Newton(f, 0, 1, 0.0001)
-    print("Решение методом Ньютона:")
-    print(solution)
-    print("Количество итераций:")
-    print(iterations)

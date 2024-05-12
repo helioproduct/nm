@@ -1,10 +1,5 @@
-from math import e
 from scipy.optimize import fsolve
 
-
-from math import fabs
-
-from math import e
 from math import log10, log
 
 

@@ -1,7 +1,7 @@
 from newton import Newton
 from iterations import iterations
 
-from function import f, phi
+from functions import f, phi
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 from scipy.optimize import fsolve
 
-from function import phi, phi1, phi2
+from functions import phi, phi1, phi2
 
 
 def iterations(f, a, b, eps):
