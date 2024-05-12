@@ -26,11 +26,3 @@ def iterations(f, a, b, eps):
         iterations += 1
 
     return (x, iterations)
-
-
-result = iterations(phi, 0, 1, 0.01)
-if result:
-    print("Решение методом простых итераций:")
-    print(result[0])
-    print("Количество итераций:")
-    print(result[1])
