@@ -22,6 +22,7 @@ def LU(A):
 
     return L, U, P
 
+
 def solve_system(L, U, b):
     n = len(A)
     # L, U, P = LU(A)
@@ -70,8 +71,7 @@ def inverse(A):
 
     inversed = []
 
-
-    L, U, _= LU(A)
+    L, U, _ = LU(A)
 
     for column in E:
         x = solve_system(L, U, column)
@@ -79,22 +79,19 @@ def inverse(A):
 
     return transpose(inversed)
 
+
 def permutation_matrix(P):
     n = len(P)
-    P_matrix = [[0]*n for _ in range(n)]
+    P_matrix = [[0] * n for _ in range(n)]
     for i in range(n):
         P_matrix[i][P[i]] = 1
     return P_matrix
 
 
 if __name__ == "__main__":
-    A = [[-5, -1, -3, -1], 
-         [-2, 0, 8, -4], 
-         [-7, -2, 2, -2], 
-         [2, -4, -4, 4]]
-    
-    b = [18, -12, 6, -12]
+    A = [[-5, -1, -3, -1], [-2, 0, 8, -4], [-7, -2, 2, -2], [2, -4, -4, 4]]
 
+    b = [18, -12, 6, -12]
 
     # A = [[1, 2, 3],
     #      [4, 5, 6],
@@ -109,24 +106,17 @@ if __name__ == "__main__":
     L, U, P = LU(A)
     print("L = ")
     print(np.array(L))
-    
+
     print("U = ")
     print(np.array(U))
 
-    
     print("P = ")
     P = np.array(permutation_matrix(P))
     print(P)
-    
-
 
     print("LU = ")
     print(np.array(L) @ np.array(U))
     # print(np.linalg.inv(P) * np.array(L) @ np.array(U))
-
-
-
-
 
     x = solve_system(L, U, b)
 

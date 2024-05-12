@@ -1,4 +1,4 @@
-from functions import f, f1, f2
+from functions import f1, f2
 
 
 def Newton(f, a, b, eps):

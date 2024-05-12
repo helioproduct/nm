@@ -1,7 +1,16 @@
+import numpy as np
+
 from functions import *
 
 
-def Newton(f, eps):
-    J = [[df1_dx1, df1_dx2], [df2_dx1, df2_dx2]]
+def Newton(F, X0, eps):
+    X = X0.copy()
+    iterations = 0
 
-    return None
+    while np.linalg.norm(F(X)) > eps:
+        J = JacobiMatrix(X)
+        delta = np.linalg.solve(J, -F(X))
+        X = X + delta
+        iterations += 1
+
+    return X, iterations
