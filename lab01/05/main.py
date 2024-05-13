@@ -9,7 +9,7 @@ def sign(x):
 
 
 def H_matrix(A, index):
-    
+
     A = np.array(A)
     n = A.shape[0]
     v = np.zeros(n)
@@ -27,12 +27,12 @@ def H_matrix(A, index):
 
 
 def QR(A):
-    A = np.array(A) 
+    A = np.array(A)
     n = A.shape[0]
-    
+
     H = H_matrix(A, 0)
-    Q = copy.deepcopy(H)  
-    
+    Q = copy.deepcopy(H)
+
     A = H @ A
     for i in range(1, n - 1):
         H = H_matrix(A, i)
@@ -55,11 +55,12 @@ def is_complex(A, i, eps):
     complex_curr = get_complex_values(A, i)
     A = R @ Q
     complex_next = get_complex_values(A, i)
-    
+
     result = abs(complex_curr[0] - complex_next[0]) <= eps
     result = result and abs(complex_curr[1] - complex_next[1]) <= eps
 
     return result
+
 
 def almost_zero(vec, eps):
     return all([abs(x) <= eps for x in vec])
@@ -72,7 +73,7 @@ def eigen_value(A, i, eps):
         Q, R = QR(A)
         A = R @ Q
 
-        if almost_zero(A[i + 1:, i], eps):
+        if almost_zero(A[i + 1 :, i], eps):
             return A[i][i], A
         elif is_complex(A, i, eps):
             return get_complex_values(A, i), A
@@ -95,19 +96,16 @@ def eigen_values(A, eps):
     return eigen_values
 
 
+A = [[1, 4, 2], [4, -1, 3], [2, 3, 1]]
 
 
-A = [[1, 4, 2],
-     [4, -1, 3],
-     [2, 3, 1]]
-
-
-
-# A = [[1, 3, 1,  2, 5],
-#      [1, 1, 4, 34, 4],
-#      [4, 3, 1, 5, 4],
-#      [1, 1, 34, 4, 5],
-#      [1, 43, 43, 4, 5]]
+A = [
+    [1, 3, 1, 2, 5],
+    [1, 1, 4, 34, 4],
+    [4, 3, 1, 5, 4],
+    [1, 1, 34, 4, 5],
+    [1, 43, 43, 4, 5],
+]
 
 
 # A = [[134, 8234, 234],

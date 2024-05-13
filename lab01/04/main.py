@@ -52,7 +52,6 @@ for v in eigen_vectors:
 print("Число итераций:", iterations)
 
 
-
 # проверка
 # lambda * v
 for v in eigen_vectors:
