@@ -3,7 +3,8 @@ from functions import *
 
 
 def Iterations(a, b, eps):
-    def get_phi_norm(x):
+
+    def GetPhiNorm(x):
         return max(
             abs(dphi1_dx1(x)) + abs(dphi1_dx2(x)), abs(dphi2_dx1(x)) + abs(dphi2_dx2(x))
         )
@@ -13,7 +14,7 @@ def Iterations(a, b, eps):
 
     x_prev = [(x0_interv[1] + x0_interv[0]) / 2, (x1_interv[1] + x1_interv[0]) / 2]
 
-    q = get_phi_norm(x_prev)
+    q = GetPhiNorm(x_prev)
     if q >= 1:
         return None
 
