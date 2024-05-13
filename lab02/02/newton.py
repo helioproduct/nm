@@ -17,6 +17,8 @@ def Newton(a, b, eps):
         iteration += 1
         jacobi = np.array(JacobiMatrix(x_prev))
         b = np.array([-f1(x_prev), -f2(x_prev)])
+        # Jx = b
+        # b = -F
         delta_x = solve(jacobi, b).tolist()
         x = [px + dx for px, dx in zip(x_prev, delta_x)]
         if norm(x, x_prev) <= eps:
