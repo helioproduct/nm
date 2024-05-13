@@ -4,6 +4,12 @@ from iterations import Iterations
 
 if __name__ == "__main__":
 
+
+    '''
+    
+    
+    '''
+
     eps = 1e-5
 
     a = [-1, -2]
