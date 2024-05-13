@@ -1,16 +1,27 @@
-import numpy as np
-
 from functions import *
+from numpy.linalg import solve
 
 
-def Newton(F, X0, eps):
-    X = X0.copy()
-    iterations = 0
+def Newton(a, b, eps):
 
-    while np.linalg.norm(F(X)) > eps:
-        J = JacobiMatrix(X)
-        delta = np.linalg.solve(J, -F(X))
-        X = X + delta
-        iterations += 1
+    def JacobiMatrix(x):
+        return [[df1_dx1(x), df1_dx2(x)], [df2_dx1(x), df2_dx2(x)]]
 
-    return X, iterations
+    x0_interv = [a[0], b[0]]
+    x1_interv = [a[1], b[1]]
+
+    x_prev = [(x0_interv[1] + x0_interv[0]) / 2, (x1_interv[1] + x1_interv[0]) / 2]
+
+    iteration = 0
+    while iteration <= 1000:
+        iteration += 1
+
+        jacobi = np.array(JacobiMatrix(x_prev))
+        b = np.array([-f1(x_prev), -f2(x_prev)])
+        delta_x = solve(jacobi, b).tolist()
+        x = [px + dx for px, dx in zip(x_prev, delta_x)]
+        error = norm(x, x_prev)
+        if error <= eps:
+            break
+        x_prev = x
+    return x, iteration

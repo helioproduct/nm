@@ -1,20 +1,21 @@
 from newton import Newton
-from iterations import iterations
+from iterations import Iterations
 
 from functions import f, phi
 
 
 if __name__ == "__main__":
     # f(x) = 0
-    solution, iterations = Newton(f, 0, 1, 0.0001)
+
+    eps = 0.01
+    solution, it = Newton(f, 0, 1, 0.01)
     print("Решение методом Ньютона:")
     print(solution)
-    print("Количество итераций:")
-    print(iterations)
+    print("Количество итераций:", it)
+    print()
 
-    result = iterations(phi, 0, 1, 0.01)
+    result = Iterations(phi, 0, 1, 0.01)
     if result:
         print("Решение методом простых итераций:")
         print(result[0])
-        print("Количество итераций:")
-        print(result[1])
+        print("Количество итераций:", result[1])

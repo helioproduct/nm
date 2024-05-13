@@ -2,8 +2,13 @@ from scipy.optimize import fsolve
 
 from functions import phi, phi1, phi2
 
+import warnings
 
-def iterations(f, a, b, eps):
+# Отключение предупреждений RuntimeWarning
+warnings.filterwarnings("ignore", category=RuntimeWarning)
+
+
+def Iterations(f, a, b, eps):
 
     root = fsolve(phi2, 0)[0]
     if a <= root <= b:
