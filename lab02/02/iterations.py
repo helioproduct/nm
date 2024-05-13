@@ -19,11 +19,10 @@ def Iterations(a, b, eps):
         return None
 
     iterations = 0
-    while iterations <= 1000:
+    while True <= 1000:
         iterations += 1
         x = [phi1(x_prev), phi2(x_prev)]
-        error = q / (1 - q) * norm(x, x_prev)
-        if error <= eps:
+        if q / (1 - q) * norm(x, x_prev) <= eps:
             break
         x_prev = x
     return x, iterations
