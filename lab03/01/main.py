@@ -3,11 +3,36 @@ import sympy as sp
 
 import matplotlib.pyplot as plt
 
-from math import log
-
 
 def f(x):
     return np.log(x) + x
+
+
+def divided_diff(xi, yi):
+    n = len(yi)
+    coef = np.zeros([n, n])
+    coef[:, 0] = yi
+
+    for j in range(1, n):
+        for i in range(n - j):
+            coef[i][j] = (coef[i + 1][j - 1] - coef[i][j - 1]) / (xi[i + j] - xi[i])
+
+    return coef[0]
+
+
+def newton_polynomial(xi, yi):
+    x = sp.symbols("x")
+    coef = divided_diff(xi, yi)
+    n = len(coef)
+    polynomial = coef[0]
+
+    for i in range(1, n):
+        term = coef[i]
+        for j in range(i):
+            term *= x - xi[j]
+        polynomial += term
+
+    return sp.simplify(polynomial)
 
 
 def lagrange_polynomial(xi, yi):
@@ -26,19 +51,27 @@ def lagrange_polynomial(xi, yi):
 
 
 if __name__ == "__main__":
+    xi1 = np.array([0.1, 0.5, 0.9, 1.3])
+    yi1 = np.array([f(x) for x in xi1])
 
-    xi = np.array([0.1, 0.5, 0.9, 1.3])
-    yi = np.array([f(x) for x in xi])
+    xi2 = np.array([0.1, 0.5, 1.1, 1.3])
+    yi2 = np.array([f(x) for x in xi2])
 
-    L = lagrange_polynomial(xi, yi)
-
-    print("Многочлен лагранжа")
+    # Многочлен Лагранжа
+    L = lagrange_polynomial(xi2, yi2)
+    print("Многочлен Лагранжа")
     print(L)
-
     lagrange_func = sp.lambdify(sp.symbols("x"), L, "numpy")
 
-    x_range = np.linspace(min(xi) - 0.1, max(xi) + 0.1, 1000)
+    # Многочлен Ньютона
+    N = newton_polynomial(xi1, yi1)
+    print("Многочлен Ньютона")
+    print(N)
+    newton_func = sp.lambdify(sp.symbols("x"), N, "numpy")
+
+    x_range = np.linspace(0, 3, 1000)
     y_lagrange = lagrange_func(x_range)
+    y_newton = newton_func(x_range)
     y_original = f(x_range)
 
     # Построение графиков
@@ -47,10 +80,14 @@ if __name__ == "__main__":
     plt.plot(
         x_range, y_lagrange, label="Многочлен Лагранжа", color="red", linestyle="--"
     )
-    plt.scatter(xi, yi, color="black", label="Узловые точки")
+    plt.plot(
+        x_range, y_newton, label="Многочлен Ньютона", color="green", linestyle="-."
+    )
+    plt.scatter(xi1, yi1, color="black", label="Узловые точки (для Ньютона)")
+    plt.scatter(xi2, yi2, color="gray", label="Узловые точки (для Лагранжа)")
     plt.xlabel("x")
     plt.ylabel("y")
-    plt.title("График многочлена Лагранжа и исходной функции")
+    plt.title("График многочленов Лагранжа и Ньютона и исходной функции")
     plt.legend()
     plt.grid(True)
     plt.show()
