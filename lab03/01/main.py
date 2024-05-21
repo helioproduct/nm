@@ -23,6 +23,7 @@ def divided_diff(xi, yi):
 def newton_polynomial(xi, yi):
     x = sp.symbols("x")
     coef = divided_diff(xi, yi)
+
     n = len(coef)
     polynomial = coef[0]
 
