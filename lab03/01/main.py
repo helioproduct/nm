@@ -57,17 +57,23 @@ if __name__ == "__main__":
     xi2 = np.array([0.1, 0.5, 1.1, 1.3])
     yi2 = np.array([f(x) for x in xi2])
 
+    x_test, y_test = 0.8, f(0.8)
+
     # Многочлен Лагранжа
     L = lagrange_polynomial(xi2, yi2)
     print("Многочлен Лагранжа")
     print(L)
     lagrange_func = sp.lambdify(sp.symbols("x"), L, "numpy")
 
+    print("Лагранж: погрешность", abs(y_test - lagrange_func(x_test)))
+    # print(lagrange_func(x_test))
+
     # Многочлен Ньютона
     N = newton_polynomial(xi1, yi1)
     print("Многочлен Ньютона")
     print(N)
     newton_func = sp.lambdify(sp.symbols("x"), N, "numpy")
+    print("Ньютон: погрешность", abs(y_test - newton_func(x_test)))
 
     x_range = np.linspace(0, 3, 1000)
     y_lagrange = lagrange_func(x_range)
