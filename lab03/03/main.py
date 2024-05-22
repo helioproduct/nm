@@ -37,6 +37,7 @@ def solve_system(A, b):
     return x
 
 
+# возвращаяет коэффициенты МНК
 def MNK(x, y, n):
     assert len(x) == len(y)
     A = []
@@ -58,17 +59,17 @@ def MNK(x, y, n):
     return solve_system(A, b)
 
 
-def P(coefs, x):
+def P(factors, x):
     result = 0
-    for i in range(len(coefs)):
-        result += coefs[i] * (x**i)
+    for i in range(len(factors)):
+        result += factors[i] * (x**i)
     return result
 
 
-def square_error(x, y, ls_coefs):
+def square_error(x, y, factors):
     y_not_real = []
     for x_i in x:
-        y_not_real.append(P(ls_coefs, x_i))
+        y_not_real.append(P(factors, x_i))
     sse = 0
     for i in range(len(y)):
         sse += (y[i] - y_not_real[i]) ** 2
