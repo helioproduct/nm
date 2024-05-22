@@ -52,7 +52,7 @@ if __name__ == "__main__":
     x_star = 2.0
 
     derivative_at_x_star = f1(x_values, y_values, x_star)
-    print("The derivative at x* = 2.0 is:", derivative_at_x_star)
+    print("Первая производная в x* = 2.0 is:", derivative_at_x_star)
 
     f2 = f2(x_values, y_values, x_star)
-    print("The second derivative at x* = 2.0 is:", f2)
+    print("Вторая производная в x* = 2.0 is:", f2)
