@@ -23,7 +23,6 @@ def f1(x_values, y_values, x_star):
 
 
 def f2(x_values, y_values, x_star):
-    # Locate the interval x_star belongs to
     for i in range(len(x_values) - 2):
         if x_values[i] <= x_star <= x_values[i + 1]:
             break
@@ -38,7 +37,6 @@ def f2(x_values, y_values, x_star):
     y_i1 = y_values[i + 1]
     y_i2 = y_values[i + 2]
 
-    # Calculate the second derivative
     second_derivative = 2 * (
         ((y_i2 - y_i1) / (x_i2 - x_i1) - (y_i1 - y_i) / (x_i1 - x_i)) / (x_i2 - x_i)
     )
