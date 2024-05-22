@@ -74,7 +74,7 @@ if __name__ == "__main__":
     ]
     d = [(c[i + 1] - c[i]) / (3 * h[i]) for i in range(len(h))]
 
-    # Create a DataFrame to store the values of S, S', S''
+    # Создаем DataFrame для хранения значений S, S', S''
     data = {"x": [], "S(x)": [], "S'(x)": [], "S''(x)": []}
 
     for i in range(len(x)):
@@ -85,8 +85,10 @@ if __name__ == "__main__":
             Si_double_prime = S_double_prime(c[i], d[i], xi, x[i])
         else:
             Si = f[-1]
-            Si_prime = S_prime(b[-1], c[-1], d[-1], xi, x[-2])
-            Si_double_prime = S_double_prime(c[-1], d[-1], xi, x[-2])
+            Si_prime = b[-1]
+            Si_double_prime = (
+                0  # Устанавливаем вторую производную на последнем узле в 0
+            )
 
         data["x"].append(xi)
         data["S(x)"].append(Si)
@@ -95,10 +97,23 @@ if __name__ == "__main__":
 
     df = pd.DataFrame(data)
 
-    # Print the table
+    # Вывод таблицы
     print(df)
 
-    # Plotting the spline and data points
+    # Проверка условий непрерывности
+    for i in range(1, len(x) - 1):
+        left = S(a[i - 1], b[i - 1], c[i - 1], d[i - 1], x[i], x[i - 1])
+        right = S(a[i], b[i], c[i], d[i], x[i], x[i])
+        left_prime = S_prime(b[i - 1], c[i - 1], d[i - 1], x[i], x[i - 1])
+        right_prime = S_prime(b[i], c[i], d[i], x[i], x[i])
+        left_double_prime = S_double_prime(c[i - 1], d[i - 1], x[i], x[i - 1])
+        right_double_prime = S_double_prime(c[i], d[i], x[i], x[i])
+        print(f"x_{i} = {x[i]}")
+        print(f"S(x_{i-1}) = S(x_{i}): {left} = {right}")
+        print(f"S'(x_{i-1}) = S'(x_{i}): {left_prime} = {right_prime}")
+        print(f"S''(x_{i-1}) = S''(x_{i}): {left_double_prime} = {right_double_prime}")
+
+    # Построение графика сплайна и точек данных
     plt.figure(figsize=(10, 6))
 
     x_dense = np.linspace(x[0], x[-1], 400)
