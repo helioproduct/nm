@@ -1,20 +1,26 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import numpy as np
+import pandas as pd
 
 
 def S(a, b, c, d, x, xi):
     return a + b * (x - xi) + c * (x - xi) ** 2 + d * (x - xi) ** 3
 
 
+def S_prime(b, c, d, x, xi):
+    return b + 2 * c * (x - xi) + 3 * d * (x - xi) ** 2
+
+
+def S_double_prime(c, d, x, xi):
+    return 2 * c + 6 * d * (x - xi)
+
+
 def solve(A, d):
     n = len(A)
-    # прямой ход
     a, b, c = 0, A[0][0], A[0][1]
     P, Q = [0] * n, [0] * n
     P[0], Q[0] = -c / b, d[0] / b
 
-    # xi = Pi x_i + 1 + Qi
     for i in range(1, n):
         a, c = 0, 0
         if i - 1 >= 0:
@@ -26,7 +32,6 @@ def solve(A, d):
         P[i] = -c / (b + a * P[i - 1])
         Q[i] = (d[i] - a * Q[i - 1]) / (b + a * P[i - 1])
 
-    # обратный ход
     x = [0] * n
     x[-1] = Q[-1]
     for i in range(n - 2, -1, -1):
@@ -35,17 +40,10 @@ def solve(A, d):
     return x
 
 
-# x = np.array([0.1, 0.5, 0.9, 1.3, 1.7])
-# f = np.array([-2.2026, -0.19315, 0.79464, 1.5624, 2.2306])
-
-
 x = np.array([0.0, 1.0, 2.0, 3.0, 4.0])
 f = np.array([0.0, 2.0, 3.4142, 4.7321, 6.0])
-x_star = 2.0
-
 
 if __name__ == "__main__":
-
     h = np.diff(x)
 
     n = len(x)
@@ -76,24 +74,39 @@ if __name__ == "__main__":
     ]
     d = [(c[i + 1] - c[i]) / (3 * h[i]) for i in range(len(h))]
 
-    # Построение графика
+    # Create a DataFrame to store the values of S, S', S''
+    data = {"x": [], "S(x)": [], "S'(x)": [], "S''(x)": []}
+
+    for i in range(len(x)):
+        xi = x[i]
+        if i < len(x) - 1:
+            Si = S(a[i], b[i], c[i], d[i], xi, x[i])
+            Si_prime = S_prime(b[i], c[i], d[i], xi, x[i])
+            Si_double_prime = S_double_prime(c[i], d[i], xi, x[i])
+        else:
+            Si = f[-1]
+            Si_prime = S_prime(b[-1], c[-1], d[-1], xi, x[-2])
+            Si_double_prime = S_double_prime(c[-1], d[-1], xi, x[-2])
+
+        data["x"].append(xi)
+        data["S(x)"].append(Si)
+        data["S'(x)"].append(Si_prime)
+        data["S''(x)"].append(Si_double_prime)
+
+    df = pd.DataFrame(data)
+
+    # Print the table
+    print(df)
+
+    # Plotting the spline and data points
     plt.figure(figsize=(10, 6))
 
-    # График сплайна
     x_dense = np.linspace(x[0], x[-1], 400)
     y_dense = np.zeros_like(x_dense)
 
-    x_test = 0.8
-    x_test = 2
-
     for j in range(len(x) - 1):
         mask = (x_dense >= x[j]) & (x_dense <= x[j + 1])
-
         y_dense[mask] = S(a[j], b[j], c[j], d[j], x_dense[mask], x[j])
-
-        if x_dense[mask][0] <= x_test <= x_dense[mask][-1]:
-            s_value = S(a[j], b[j], c[j], d[j], x_test, x[j])
-            print(f"S({x_test}) = {s_value}")
 
     plt.plot(x_dense, y_dense, label="Cubic Spline", color="blue")
     plt.scatter(x, f, color="red", label="Data Points")
