@@ -10,25 +10,27 @@ def f(x):
 
 def divided_diff(xi, yi):
     n = len(yi)
-    coef = np.zeros([n, n])
-    coef[:, 0] = yi
+    factors = np.zeros([n, n])
+    factors[:, 0] = yi
 
     for j in range(1, n):
         for i in range(n - j):
-            coef[i][j] = (coef[i + 1][j - 1] - coef[i][j - 1]) / (xi[i + j] - xi[i])
+            factors[i][j] = (factors[i + 1][j - 1] - factors[i][j - 1]) / (
+                xi[i + j] - xi[i]
+            )
 
-    return coef[0]
+    return factors[0]
 
 
 def newton_polynomial(xi, yi):
     x = sp.symbols("x")
-    coef = divided_diff(xi, yi)
+    factors = divided_diff(xi, yi)
 
-    n = len(coef)
-    polynomial = coef[0]
+    n = len(factors)
+    polynomial = factors[0]
 
     for i in range(1, n):
-        term = coef[i]
+        term = factors[i]
         for j in range(i):
             term *= x - xi[j]
         polynomial += term
