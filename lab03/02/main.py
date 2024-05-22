@@ -35,8 +35,13 @@ def solve(A, d):
     return x
 
 
-x = np.array([0.1, 0.5, 0.9, 1.3, 1.7])
-f = np.array([-2.2026, -0.19315, 0.79464, 1.5624, 2.2306])
+# x = np.array([0.1, 0.5, 0.9, 1.3, 1.7])
+# f = np.array([-2.2026, -0.19315, 0.79464, 1.5624, 2.2306])
+
+
+x = np.array([0.0, 1.0, 2.0, 3.0, 4.0])
+f = np.array([0.0, 2.0, 3.4142, 4.7321, 6.0])
+x_star = 2.0
 
 
 if __name__ == "__main__":
@@ -79,6 +84,7 @@ if __name__ == "__main__":
     y_dense = np.zeros_like(x_dense)
 
     x_test = 0.8
+    x_test = 2
 
     for j in range(len(x) - 1):
         mask = (x_dense >= x[j]) & (x_dense <= x[j + 1])
