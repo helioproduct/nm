@@ -2,33 +2,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-"""
-
-(x^2 - 1)y'' - 2xy' + 2y = 0
-y(2) = 7
-y'(2) = 5
-
-x in [2, 3], h = 0.1
-
-y' = z 
-z' = 2xz - 2y / (x^2 - 1)   (f)
-y(2) = 7
-z(2) = 5
-
-"""
-
-
-# Define the exact solution for comparison
-def reference(x):
+def exact_solution(x):
     return x**2 + x + 1
 
 
-# Define the derivatives for the system of first-order ODEs
 def f(x, y, z):
     return (2 * x * z - 2 * y) / (x**2 - 1)
 
 
-# Implement the Runge-Kutta 4th order method to get initial values
 def runge_kutta_4(x0, y0, z0, h, steps):
     x_values = [x0]
     y_values = [y0]
@@ -60,6 +41,42 @@ def runge_kutta_4(x0, y0, z0, h, steps):
         z_values.append(z)
 
     return x_values, y_values, z_values
+
+
+def runge_kutta_4_full(x0, y0, z0, h, x_end):
+    n = int((x_end - x0) / h)
+    x_values = np.linspace(x0, x_end, n + 1)
+    y_values = np.zeros(n + 1)
+    z_values = np.zeros(n + 1)
+
+    y_values[0] = y0
+    z_values[0] = z0
+
+    x = x0
+    y = y0
+    z = z0
+
+    for i in range(n):
+        k1_y = h * z
+        k1_z = h * f(x, y, z)
+
+        k2_y = h * (z + 0.5 * k1_z)
+        k2_z = h * f(x + 0.5 * h, y + 0.5 * k1_y, z + 0.5 * k1_z)
+
+        k3_y = h * (z + 0.5 * k2_z)
+        k3_z = h * f(x + 0.5 * h, y + 0.5 * k2_y, z + 0.5 * k2_z)
+
+        k4_y = h * (z + k3_z)
+        k4_z = h * f(x + h, y + k3_y, z + k3_z)
+
+        y += (k1_y + 2 * k2_y + 2 * k3_y + k4_y) / 6
+        z += (k1_z + 2 * k2_z + 2 * k3_z + k4_z) / 6
+        x += h
+
+        y_values[i + 1] = y
+        z_values[i + 1] = z
+
+    return x_values, y_values
 
 
 def euler_method(x0, y0, z0, h, x_end):
@@ -103,6 +120,10 @@ def adams_bashforth_4(x0, y0, z0, h, x_end):
     return x_values, y_values
 
 
+def runge_romberg(y_h, y_h2, p):
+    return (y_h2 - y_h) / (2**p - 1)
+
+
 if __name__ == "__main__":
 
     x0 = 2
@@ -112,13 +133,45 @@ if __name__ == "__main__":
     x_end = 3
 
     x_values_euler, y_values_euler = euler_method(x0, y0, z0, h, x_end)
-    x_values_adams, y_values_adams = adams_bashforth_4(x0, y0, z0, h, x_end)
-    exact_y_values = reference(x_values_euler)
+
+    x_values_rk, y_values_rk = runge_kutta_4_full(x0, y0, z0, h, x_end)
+    x_values_adams_h, y_values_adams_h = adams_bashforth_4(x0, y0, z0, h, x_end)
+
+    x_values_euler_h2, y_values_euler_h2 = euler_method(x0, y0, z0, h / 2, x_end)
+    x_values_rk_h2, y_values_rk_h2 = runge_kutta_4_full(x0, y0, z0, h / 2, x_end)
+
+    x_values_adams_h2, y_values_adams_h2 = adams_bashforth_4(x0, y0, z0, h / 2, x_end)
+    exact_y_values = exact_solution(x_values_euler)
+
+    p_euler = 1
+    p_rk = 4
+    p_adams = 4
+
+    errors_euler_rr = runge_romberg(y_values_euler, y_values_euler_h2[::2], p_euler)
+    errors_rk_rr = runge_romberg(y_values_rk, y_values_rk_h2[::2], p_rk)
+    errors_adams_rr = runge_romberg(y_values_adams_h, y_values_adams_h2[::2], p_adams)
+
+    print(
+        "Погршеность Рунге–Ромберга для метода Эйлера: ",
+        np.max(np.abs(errors_euler_rr)),
+    )
+    print(
+        "Погршеность Рунге–Ромберга для метода Рунге-Кутты: ",
+        np.max(np.abs(errors_rk_rr)),
+    )
+    print(
+        "Погршеность Рунге–Ромберга для метода Адамса:",
+        np.max(np.abs(errors_adams_rr)),
+    )
 
     plt.figure(figsize=(10, 6))
     plt.plot(x_values_euler, y_values_euler, "b", label="Euler Method Solution")
+    plt.plot(x_values_rk, y_values_rk, "c", label="Runge-Kutta 4th Order Solution")
     plt.plot(
-        x_values_adams, y_values_adams, "g", label="Adams-Bashforth 4th Order Solution"
+        x_values_adams_h,
+        y_values_adams_h,
+        "g",
+        label="Adams-Bashforth 4th Order Solution",
     )
     plt.plot(x_values_euler, exact_y_values, "r", label="Exact Solution")
     plt.xlabel("x")
