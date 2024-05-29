@@ -43,7 +43,7 @@ def runge_kutta_4(x0, y0, z0, h, steps):
     return x_values, y_values, z_values
 
 
-def runge_kutta_4_full(x0, y0, z0, h, x_end):
+def runge_kutta_4(x0, y0, z0, h, x_end):
     n = int((x_end - x0) / h)
     x_values = np.linspace(x0, x_end, n + 1)
     y_values = np.zeros(n + 1)
@@ -95,7 +95,7 @@ def euler_method(x0, y0, z0, h, x_end):
     return x_values, y_values
 
 
-def adams_bashforth_4(x0, y0, z0, h, x_end):
+def adams_4(x0, y0, z0, h, x_end):
     _, y_rk, z_rk = runge_kutta_4(x0, y0, z0, h, 3)
 
     n = int((x_end - x0) / h)
@@ -134,13 +134,13 @@ if __name__ == "__main__":
 
     x_values_euler, y_values_euler = euler_method(x0, y0, z0, h, x_end)
 
-    x_values_rk, y_values_rk = runge_kutta_4_full(x0, y0, z0, h, x_end)
-    x_values_adams_h, y_values_adams_h = adams_bashforth_4(x0, y0, z0, h, x_end)
+    x_values_rk, y_values_rk = runge_kutta_4(x0, y0, z0, h, x_end)
+    x_values_adams_h, y_values_adams_h = adams_4(x0, y0, z0, h, x_end)
 
     x_values_euler_h2, y_values_euler_h2 = euler_method(x0, y0, z0, h / 2, x_end)
-    x_values_rk_h2, y_values_rk_h2 = runge_kutta_4_full(x0, y0, z0, h / 2, x_end)
+    x_values_rk_h2, y_values_rk_h2 = runge_kutta_4(x0, y0, z0, h / 2, x_end)
 
-    x_values_adams_h2, y_values_adams_h2 = adams_bashforth_4(x0, y0, z0, h / 2, x_end)
+    x_values_adams_h2, y_values_adams_h2 = adams_4(x0, y0, z0, h / 2, x_end)
     exact_y_values = exact_solution(x_values_euler)
 
     p_euler = 1
