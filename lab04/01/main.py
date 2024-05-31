@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def exact_solution(x):
+def reference(x):
     return x**2 + x + 1
 
 
@@ -43,7 +43,7 @@ def runge_kutta_4(x0, y0, z0, h, steps):
     return x_values, y_values, z_values
 
 
-def runge_kutta_4(x0, y0, z0, h, x_end):
+def runge_kutta_4_full(x0, y0, z0, h, x_end):
     n = int((x_end - x0) / h)
     x_values = np.linspace(x0, x_end, n + 1)
     y_values = np.zeros(n + 1)
@@ -120,63 +120,36 @@ def adams_4(x0, y0, z0, h, x_end):
     return x_values, y_values
 
 
-def runge_romberg(y_h, y_h2, p):
-    return (y_h2 - y_h) / (2**p - 1)
+x0 = 2
+y0 = 7
+z0 = 5
+h = 0.1
+x_end = 3
 
+x_values_euler, y_values_euler = euler_method(x0, y0, z0, h, x_end)
+x_values_rk, y_values_rk = runge_kutta_4_full(x0, y0, z0, h, x_end)
+x_values_adams_h, y_values_adams_h = adams_4(x0, y0, z0, h, x_end)
 
-if __name__ == "__main__":
+exact_y_values = reference(x_values_euler)
 
-    x0 = 2
-    y0 = 7
-    z0 = 5
-    h = 0.1
-    x_end = 3
+errors_euler = np.abs(y_values_euler - exact_y_values)
+errors_rk = np.abs(y_values_rk - exact_y_values)
+errors_adams = np.abs(y_values_adams_h - exact_y_values)
 
-    x_values_euler, y_values_euler = euler_method(x0, y0, z0, h, x_end)
+print("Euler Error: ", np.max(errors_euler))
+print("Runge-Kutta  Error: ", np.max(errors_rk))
+print("Adams 4th  Error: ", np.max(errors_adams))
 
-    x_values_rk, y_values_rk = runge_kutta_4(x0, y0, z0, h, x_end)
-    x_values_adams_h, y_values_adams_h = adams_4(x0, y0, z0, h, x_end)
-
-    x_values_euler_h2, y_values_euler_h2 = euler_method(x0, y0, z0, h / 2, x_end)
-    x_values_rk_h2, y_values_rk_h2 = runge_kutta_4(x0, y0, z0, h / 2, x_end)
-
-    x_values_adams_h2, y_values_adams_h2 = adams_4(x0, y0, z0, h / 2, x_end)
-    exact_y_values = exact_solution(x_values_euler)
-
-    p_euler = 1
-    p_rk = 4
-    p_adams = 4
-
-    errors_euler_rr = runge_romberg(y_values_euler, y_values_euler_h2[::2], p_euler)
-    errors_rk_rr = runge_romberg(y_values_rk, y_values_rk_h2[::2], p_rk)
-    errors_adams_rr = runge_romberg(y_values_adams_h, y_values_adams_h2[::2], p_adams)
-
-    print(
-        "Погршеность Рунге–Ромберга для метода Эйлера: ",
-        np.max(np.abs(errors_euler_rr)),
-    )
-    print(
-        "Погршеность Рунге–Ромберга для метода Рунге-Кутты: ",
-        np.max(np.abs(errors_rk_rr)),
-    )
-    print(
-        "Погршеность Рунге–Ромберга для метода Адамса:",
-        np.max(np.abs(errors_adams_rr)),
-    )
-
-    plt.figure(figsize=(10, 6))
-    plt.plot(x_values_euler, y_values_euler, "b", label="Euler Method Solution")
-    plt.plot(x_values_rk, y_values_rk, "c", label="Runge-Kutta 4th Order Solution")
-    plt.plot(
-        x_values_adams_h,
-        y_values_adams_h,
-        "g",
-        label="Adams-Bashforth 4th Order Solution",
-    )
-    plt.plot(x_values_euler, exact_y_values, "r", label="Exact Solution")
-    plt.xlabel("x")
-    plt.ylabel("y")
-    plt.title("Comparison of Numerical Methods and Exact Solution")
-    plt.legend()
-    plt.grid(True)
-    plt.show()
+plt.figure(figsize=(10, 6))
+plt.plot(x_values_euler, y_values_euler, "b", label="Euler Method Solution")
+plt.plot(x_values_rk, y_values_rk, "c", label="Runge-Kutta 4th Order Solution")
+plt.plot(
+    x_values_adams_h, y_values_adams_h, "g", label="Adams-Bashforth 4th Order Solution"
+)
+plt.plot(x_values_euler, exact_y_values, "r", label="Exact Solution")
+plt.xlabel("x")
+plt.ylabel("y")
+plt.title("Comparison of Numerical Methods and Exact Solution")
+plt.legend()
+plt.grid(True)
+plt.show()
