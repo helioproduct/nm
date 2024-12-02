@@ -18,14 +18,14 @@ def u_left(t):
     return sin(t)  # Дирихле на x=0
 
 # u(x=pi/2, t)
-def u_right(t):
+def ux_right(t):
     return -sin(t)  # Нейман на x=pi/2
 
 # начальное условие
 def u_start(x):
     return 0  # u(x, 0) = 0
 
-def true_solution(t, x):
+def u_real(t, x):
     return sin(t) * cos(x)
 
 def explicit(n, L, R, K, T, approximation_type=1):
@@ -35,7 +35,7 @@ def explicit(n, L, R, K, T, approximation_type=1):
     sigma = tau / (h * h)
     
     if sigma > 0.5:
-        raise Exception(f"σ is greater than 1/2: tau / (h * h) > 0.5 (tau={tau}, h={h})")
+        raise Exception(f"σ is greater than 1/2: tau / h**2 > 0.5 (tau={tau}, h={h})")
     
     for i in range(n + 1):
         u[0][i] = u_start(xi(L, i, h))
@@ -54,31 +54,33 @@ def explicit(n, L, R, K, T, approximation_type=1):
                 tau * f(time(k - 1, tau), xi(L, i, h))
             )
        
-        # Граничные условия        
+
+        # Дирихле на x=0
+        u[k][0] = u_left(time(k, tau))
+
+        # Граничные условия    
+        # ux_right[k][j] = (u[k+1][j] - u[k][j]) / h
+        # u[k+1][j] = ux_right[k][j] * h + u[k][j]
+        # u[k][j] = ux_right[k-1][j] * h + u[k - 1][j]
+        # Двухточечная аппроксимация первого порядка    
         if approximation_type == 1:
-            # Дирихле на x=0
-            u[k][0] = u_left(time(k, tau))
-            # Нейман на x=R
-            u[k][-1] = u[k][-2] + u_right(time(k, tau)) * h
+
+            # u(R, t) = u(R - h, t) + h * u'x(t)
+            u[k][-1] = u[k][-2] + ux_right(time(k, tau)) * h
        
+        # Трехточечная аппроксимация второго порядка
         elif approximation_type == 2:
-            # Дирихле на x=0
-            u[k][0] = u_left(time(k, tau))
-            # Трехточечная аппроксимация второго порядка для Неймана на x=R
-            u[k][-1] = (1 / 3) * (2 * h * u_right(time(k, tau)) + 4 * u[k][-2] - u[k][-3])
+            u[k][-1] = (1 / 3) * (2 * h * ux_right(time(k, tau)) + 4 * u[k][-2] - u[k][-3])
         
+        # Двухточечная аппроксимация второго порядка
         elif approximation_type == 3:
-            # Дирихле на x=0
-            u[k][0] = u_left(time(k, tau))
-            # Двухточечная аппроксимация второго порядка для Неймана на x=R
             g = (h * h) / (2 * tau)
             u[k][-1] = (
                 (1 / (1 + g)) *
-                (u[k][-2] + u_right(time(k, tau)) * h + g * u[k - 1][-1] + g * tau * f(time(k, tau), xi(L, n, h)))
+                (u[k][-2] + ux_right(time(k, tau)) * h + g * u[k - 1][-1] + g * tau * f(time(k, tau), xi(L, n, h)))
             )
 
     return u
-
 
 
 def solve_triag(a, b, c, d):
@@ -97,6 +99,7 @@ def solve_triag(a, b, c, d):
         x[i] = P[i] * x[i + 1] + Q[i]
     return x
 
+
 def implicit(n, L, R, K, T, approx=1):
     u = np.zeros((K + 1, n + 1))
     tau = T / K
@@ -111,6 +114,7 @@ def implicit(n, L, R, K, T, approx=1):
         b = np.zeros(n + 1)
         c = np.zeros(n + 1)
         d = np.zeros(n + 1)
+        
         for i in range(1, n):
             a[i] = sigma
             b[i] = -1 - 2 * sigma
@@ -119,18 +123,19 @@ def implicit(n, L, R, K, T, approx=1):
         
         # Граничные условия
         if approx == 1:
-            # Дирихле на x=0
+            # x=0
             a[0] = 0
             b[0] = 1
             c[0] = 0
             d[0] = u_left(time(k + 1, tau))
-            # Нейман на x=R
+            # x=R
             a[-1] = -1
             b[-1] = 1
             c[-1] = 0
-            d[-1] = u_right(time(k + 1, tau)) * h
+            d[-1] = ux_right(time(k + 1, tau)) * h
+       
         elif approx == 2:
-            # Дирихле на x=0
+            # x=0
             a[0] = 0
             b[0] = 1
             c[0] = 0
@@ -139,7 +144,8 @@ def implicit(n, L, R, K, T, approx=1):
             a[-1] = -1 / (2 * h)
             b[-1] = 0
             c[-1] = 1 / (2 * h)
-            d[-1] = u_right(time(k + 1, tau))
+            d[-1] = ux_right(time(k + 1, tau))
+       
         elif approx == 3:
             # Дирихле на x=0
             a[0] = 0
@@ -154,10 +160,11 @@ def implicit(n, L, R, K, T, approx=1):
             d[-1] = (
                 -g * u[k][-1] -
                 g * tau * f(time(k + 1, tau), xi(L, n, h)) -
-                h * u_right(time(k + 1, tau))
+                h * ux_right(time(k + 1, tau))
             )
         solve = solve_triag(a, b, c, d)
         u[k + 1] = solve
+    
     return u
 
 
@@ -197,16 +204,18 @@ if __name__ == "__main__":
     time_range = np.linspace(0, T, K + 1)
     mae_u_explicit_1 = np.zeros(K + 1)
     mae_u_explicit_2 = np.zeros(K + 1)
+   
     mae_u_explicit_3 = np.zeros(K + 1)
     mae_u_implicit_1 = np.zeros(K + 1)
     mae_u_implicit_2 = np.zeros(K + 1)
     mae_u_implicit_3 = np.zeros(K + 1)
+   
     mae_u_crank_nicolson_1 = np.zeros(K + 1)
     mae_u_crank_nicolson_2 = np.zeros(K + 1)
     mae_u_crank_nicolson_3 = np.zeros(K + 1)
 
     for k in range(K + 1):
-        analytical = np.array([true_solution(time(k, tau), xi(L, i, h)) for i in range(n + 1)])
+        analytical = np.array([u_real(time(k, tau), xi(L, i, h)) for i in range(n + 1)])
         
         mae_u_explicit_1[k] = np.mean(np.abs(explicit_1[k] - analytical))
         mae_u_explicit_2[k] = np.mean(np.abs(explicit_2[k] - analytical))
@@ -248,7 +257,7 @@ if __name__ == "__main__":
 
     plt.figure(figsize=(12, 8))
     current_time = time(time_index, tau)
-    u_analytic_values = [true_solution(current_time, xi(L, i, h)) for i in range(n + 1)]
+    u_analytic_values = [u_real(current_time, xi(L, i, h)) for i in range(n + 1)]
     
     
     u_explicit_1_values = [explicit_1[time_index][i] for i in range(n + 1)]
