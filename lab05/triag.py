@@ -1,5 +1,9 @@
 import numpy as np
 
+import warnings
+warnings.filterwarnings("ignore")
+
+
 def solve_triag(a, b, c, d):
     n = len(d)
     P = np.zeros(n)
@@ -15,3 +19,5 @@ def solve_triag(a, b, c, d):
     for i in range(n - 2, -1, -1):
         x[i] = P[i] * x[i + 1] + Q[i]
     return x
+
+

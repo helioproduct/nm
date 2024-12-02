@@ -160,9 +160,98 @@ def implicit(n, L, R, K, T, approx=1):
     return u
 
 
+
+
+def CN_method(n, L, R, K, T, approx=1, theta=0.5):
+    u = np.zeros((K + 1, n + 1))
+    tau = T / K
+    h = (R - L) / n
+    sigma = tau / (h * h)
+
+    # Initialize u at time k=0
+    for i in range(n + 1):
+        u[0][i] = u_start(xi(L, i, h))
+    
+    for k in range(K):
+        a = np.zeros(n + 1)
+        b = np.zeros(n + 1)
+        c = np.zeros(n + 1)
+        d = np.zeros(n + 1)
+        
+        # Compute f at times k and k+1
+        f_k = np.array([f(time(k, tau), xi(L, i, h)) for i in range(n + 1)])
+        f_k1 = np.array([f(time(k + 1, tau), xi(L, i, h)) for i in range(n + 1)])
+
+        # Interior nodes
+        for i in range(1, n):
+            a[i] = - theta * sigma
+            b[i] = 1 + 2 * theta * sigma
+            c[i] = - theta * sigma
+            d[i] = (
+                (1 - (1 - theta) * 2 * sigma) * u[k][i] +
+                (1 - theta) * sigma * (u[k][i - 1] + u[k][i + 1]) +
+                tau * (theta * f_k1[i] + (1 - theta) * f_k[i])
+            )
+        
+        # Boundary conditions
+        if approx == 1:
+            # x=0, Dirichlet boundary condition
+            a[0] = 0
+            b[0] = 1
+            c[0] = 0
+            d[0] = u_left(time(k + 1, tau))
+            
+            # x=R, Neumann boundary condition, first-order approximation
+            # (-u_{n-1}^{k+1} + u_n^{k+1}) = ux_right * h
+            a[n] = -1
+            b[n] = 1
+            c[n] = 0
+            d[n] = ux_right(time(k + 1, tau)) * h
+
+        elif approx == 2:
+            # x=0, Dirichlet boundary condition
+            a[0] = 0
+            b[0] = 1
+            c[0] = 0
+            d[0] = u_left(time(k + 1, tau))
+            
+            # x=R, Neumann boundary condition, second-order approximation (three-point)
+            # ( -u_{n-2} + 4 * u_{n-1} - 3 * u_n ) / (2 * h) = ux_right
+            a[n - 2] = -1 / (2 * h)
+            b[n - 1] = 4 / (2 * h)
+            c[n] = -3 / (2 * h)
+            d[n] = ux_right(time(k + 1, tau))
+        
+        elif approx == 3:
+            # x=0, Dirichlet boundary condition
+            a[0] = 0
+            b[0] = 1
+            c[0] = 0
+            d[0] = u_left(time(k + 1, tau))
+            
+            # x=R, Neumann boundary condition, second-order approximation (two-point)
+            g = (h * h) / (2 * tau)
+            a[n] = 1
+            b[n] = -1 - g
+            c[n] = 0
+            d[n] = (
+                -g * u[k][n] -
+                g * tau * (theta * f_k1[n] + (1 - theta) * f_k[n]) -
+                h * ux_right(time(k + 1, tau))
+            )
+        
+        # Solve the tridiagonal system
+        solve = solve_triag(a, b, c, d)
+        u[k + 1] = solve
+
+    return u
+
+
+
+
+
 if __name__ == "__main__":
 
-    # Параметры задачи
     L = 0
     R = pi / 2
     T = 10
@@ -176,19 +265,18 @@ if __name__ == "__main__":
     print("sigma = ", tau / (h * h))
 
 
-    # Явная конечно-разностная схема
     explicit_1 = explicit(n, L, R, K, T, approximation_type=1)
     explicit_2 = explicit(n, L, R, K, T, approximation_type=2)
     explicit_3 = explicit(n, L, R, K, T, approximation_type=3)
 
-    # Неявная конечно-разностная схема
     implicit_1 = implicit(n, L, R, K, T, approx=1)
     implicit_2 = implicit(n, L, R, K, T, approx=2)
     implicit_3 = implicit(n, L, R, K, T, approx=3)
 
-    # u_crank_nicolson_1 = crank_nicolson(n, L, R, K, T, approx=1)
-    # u_crank_nicolson_2 = crank_nicolson(n, L, R, K, T, approx=2)
-    # u_crank_nicolson_3 = crank_nicolson(n, L, R, K, T, approx=3)
+    theta=0
+    u_crank_nicolson_1 = CN_method(n, L, R, K, T, approx=1, theta=theta)
+    u_crank_nicolson_2 = CN_method(n, L, R, K, T, approx=2, theta=theta)
+    u_crank_nicolson_3 = CN_method(n, L, R, K, T, approx=3, theta=theta)
 
     # вычисление ошибок
     tau = T / K
@@ -218,9 +306,9 @@ if __name__ == "__main__":
         mae_u_implicit_3[k] = np.mean(np.abs(implicit_3[k] - analytical))
     
 
-        # mae_u_crank_nicolson_1[k] = np.mean(np.abs(u_crank_nicolson_1[k] - analytical))
-        # mae_u_crank_nicolson_2[k] = np.mean(np.abs(u_crank_nicolson_2[k] - analytical))
-        # mae_u_crank_nicolson_3[k] = np.mean(np.abs(u_crank_nicolson_3[k] - analytical))
+        mae_u_crank_nicolson_1[k] = np.mean(np.abs(u_crank_nicolson_1[k] - analytical))
+        mae_u_crank_nicolson_2[k] = np.mean(np.abs(u_crank_nicolson_2[k] - analytical))
+        mae_u_crank_nicolson_3[k] = np.mean(np.abs(u_crank_nicolson_3[k] - analytical))
 
     # Построение графика погрешности
     
@@ -229,15 +317,14 @@ if __name__ == "__main__":
     plt.plot(time_range, mae_u_explicit_2, label="Явная 3т-ная схема 2-го порядка")
     plt.plot(time_range, mae_u_explicit_3, label="Явная. 2т-ная схема 2-го порядка")
     
-    plt.plot(time_range, mae_u_implicit_1, label="Неявная. 2т-ная. схема 1-го порядка")
-    plt.plot(time_range, mae_u_implicit_2, label="Неявн. 3т-ная схема 2-го порядка")
-    plt.plot(time_range, mae_u_implicit_3, label="Неявн. 2т-ная схема 2-го порядка")
+    # plt.plot(time_range, mae_u_implicit_1, label="Неявная. 2т-ная. схема 1-го порядка")
+    # plt.plot(time_range, mae_u_implicit_2, label="Неявн. 3т-ная схема 2-го порядка")
+    # plt.plot(time_range, mae_u_implicit_3, label="Неявн. 2т-ная схема 2-го порядка")
     
     
-    # plt.plot(time_range, mae_u_crank_nicolson_1, label="К-Н. 2т-ная 1")
-    # plt.plot(time_range, mae_u_crank_nicolson_2, label="К-Н. 3т. 2")
-    # plt.plot(time_range, mae_u_crank_nicolson_3, label="К-Н. 2т. 2")
-
+    plt.plot(time_range, mae_u_crank_nicolson_1, label="KN. 2т-ная. схема 1-го порядка")
+    plt.plot(time_range, mae_u_crank_nicolson_2, label="KN. 3т-ная схема 2-го порядка")
+    plt.plot(time_range, mae_u_crank_nicolson_3, label="KN. 2т-ная схема 2-го порядка")
 
     plt.xlabel('t')
     plt.ylabel('mae(u(x, t), U(x, t))')
@@ -251,7 +338,7 @@ if __name__ == "__main__":
 
 
 
-    time_index = 5
+    time_index = 5000
     x = np.linspace(L, R, n + 1)
 
     plt.figure(figsize=(10, 5))
@@ -262,15 +349,18 @@ if __name__ == "__main__":
     u_explicit_1_values = [explicit_1[time_index][i] for i in range(n + 1)]
     u_explicit_2_values = [explicit_2[time_index][i] for i in range(n + 1)]
     u_explicit_3_values = [explicit_3[time_index][i] for i in range(n + 1)]
+    
     u_implicit_1_values = [implicit_1[time_index][i] for i in range(n + 1)]
     u_implicit_2_values = [implicit_2[time_index][i] for i in range(n + 1)]
     u_implicit_3_values = [implicit_3[time_index][i] for i in range(n + 1)]
-    # u_crank_nicolson_1_values = [u_crank_nicolson_1[time_index][i] for i in range(n + 1)]
-    # u_crank_nicolson_2_values = [u_crank_nicolson_2[time_index][i] for i in range(n + 1)]
-    # u_crank_nicolson_3_values = [u_crank_nicolson_3[time_index][i] for i in range(n + 1)]
+    
+    u_crank_nicolson_1_values = [u_crank_nicolson_1[time_index][i] for i in range(n + 1)]
+    u_crank_nicolson_2_values = [u_crank_nicolson_2[time_index][i] for i in range(n + 1)]
+    u_crank_nicolson_3_values = [u_crank_nicolson_3[time_index][i] for i in range(n + 1)]
 
 
     plt.plot(x, u_analytic_values, label=f'Аналитическое, t = {current_time}')
+
     plt.plot(x, u_explicit_1_values, label=f'Явн. 2т. 1, t = {current_time}')
     plt.plot(x, u_explicit_2_values, label=f'Явн. 3т. 2, t = {current_time}')
     plt.plot(x, u_explicit_3_values, label=f'Явн. 2т. 2, t = {current_time}')
@@ -279,6 +369,9 @@ if __name__ == "__main__":
     plt.plot(x, u_implicit_2_values, label=f'неявн. 2т. 2, t = {current_time}')
     plt.plot(x, u_implicit_3_values, label=f'неявн. 2т. 3, t = {current_time}')
 
+    plt.plot(x, u_crank_nicolson_1_values, label="CN. 2т-ная. схема 1-го порядка")
+    plt.plot(x, u_crank_nicolson_2_values, label="CN. 3т-ная схема 2-го порядка")
+    plt.plot(x, u_crank_nicolson_3_values, label="CN. 2т-ная схема 2-го порядка")
 
 
     plt.xlabel('x')
@@ -290,3 +383,4 @@ if __name__ == "__main__":
     plt.legend()
     plt.grid()
     plt.show()
+
