@@ -1,6 +1,9 @@
 import matplotlib.pyplot as plt
 from math import sin, cos, pi
+
+from triag import solve_triag
 import numpy as np
+
 
 # time at k-index
 def time(k, tau):
@@ -83,22 +86,6 @@ def explicit(n, L, R, K, T, approximation_type=1):
     return u
 
 
-def solve_triag(a, b, c, d):
-    n = len(d)
-    P = np.zeros(n)
-    Q = np.zeros(n)
-    P[0] = -c[0] / b[0]
-    Q[0] = d[0] / b[0]
-    for i in range(1, n):
-        denom = b[i] + a[i] * P[i - 1]
-        P[i] = -c[i] / denom
-        Q[i] = (d[i] - a[i] * Q[i - 1]) / denom
-    x = np.zeros(n)
-    x[-1] = Q[-1]
-    for i in range(n - 2, -1, -1):
-        x[i] = P[i] * x[i + 1] + Q[i]
-    return x
-
 
 def implicit(n, L, R, K, T, approx=1):
     u = np.zeros((K + 1, n + 1))
@@ -106,6 +93,7 @@ def implicit(n, L, R, K, T, approx=1):
     h = (R - L) / n
     sigma = tau / (h * h)
     
+    # at time=0
     for i in range(n + 1):
         u[0][i] = u_start(xi(L, i, h))
     
@@ -128,6 +116,7 @@ def implicit(n, L, R, K, T, approx=1):
             b[0] = 1
             c[0] = 0
             d[0] = u_left(time(k + 1, tau))
+            
             # x=R
             a[-1] = -1
             b[-1] = 1
@@ -139,20 +128,23 @@ def implicit(n, L, R, K, T, approx=1):
             a[0] = 0
             b[0] = 1
             c[0] = 0
+            
             d[0] = u_left(time(k + 1, tau))
-            # Трехточечная аппроксимация второго порядка для Неймана на x=R
+            
+            # Трехточечная аппроксимация второго  на x=R
             a[-1] = -1 / (2 * h)
             b[-1] = 0
             c[-1] = 1 / (2 * h)
             d[-1] = ux_right(time(k + 1, tau))
        
         elif approx == 3:
-            # Дирихле на x=0
+            # x=0
             a[0] = 0
             b[0] = 1
             c[0] = 0
             d[0] = u_left(time(k + 1, tau))
-            # Двухточечная аппроксимация второго порядка для Неймана на x=R
+
+            # Двухточечная аппроксимация второго порядка на x=R
             g = (h * h) / (2 * tau)
             a[-1] = 1
             b[-1] = -1 - g
@@ -220,6 +212,7 @@ if __name__ == "__main__":
         mae_u_explicit_1[k] = np.mean(np.abs(explicit_1[k] - analytical))
         mae_u_explicit_2[k] = np.mean(np.abs(explicit_2[k] - analytical))
         mae_u_explicit_3[k] = np.mean(np.abs(explicit_3[k] - analytical))
+
         mae_u_implicit_1[k] = np.mean(np.abs(implicit_1[k] - analytical))
         mae_u_implicit_2[k] = np.mean(np.abs(implicit_2[k] - analytical))
         mae_u_implicit_3[k] = np.mean(np.abs(implicit_3[k] - analytical))
@@ -230,20 +223,26 @@ if __name__ == "__main__":
         # mae_u_crank_nicolson_3[k] = np.mean(np.abs(u_crank_nicolson_3[k] - analytical))
 
     # Построение графика погрешности
-    plt.figure(figsize=(12, 8))
-    plt.plot(time_range, mae_u_explicit_1, label="Явн. 2т. 1")
-    plt.plot(time_range, mae_u_explicit_2, label="Явн. 3т. 2")
-    plt.plot(time_range, mae_u_explicit_3, label="Явн. 2т. 2")
-    plt.plot(time_range, mae_u_implicit_1, label="Неявн. 2т. 1")
-    plt.plot(time_range, mae_u_implicit_2, label="Неявн. 3т. 2")
-    plt.plot(time_range, mae_u_implicit_3, label="Неявн. 2т. 2")
-    plt.plot(time_range, mae_u_crank_nicolson_1, label="К-Н. 2т. 1")
-    plt.plot(time_range, mae_u_crank_nicolson_2, label="К-Н. 3т. 2")
-    plt.plot(time_range, mae_u_crank_nicolson_3, label="К-Н. 2т. 2")
+    
+    plt.figure(figsize=(10, 5))
+    plt.plot(time_range, mae_u_explicit_1, label="Явная. 2т-ная. схема 1-го порядка")
+    plt.plot(time_range, mae_u_explicit_2, label="Явная 3т-ная схема 2-го порядка")
+    plt.plot(time_range, mae_u_explicit_3, label="Явная. 2т-ная схема 2-го порядка")
+    
+    plt.plot(time_range, mae_u_implicit_1, label="Неявная. 2т-ная. схема 1-го порядка")
+    plt.plot(time_range, mae_u_implicit_2, label="Неявн. 3т-ная схема 2-го порядка")
+    plt.plot(time_range, mae_u_implicit_3, label="Неявн. 2т-ная схема 2-го порядка")
+    
+    
+    # plt.plot(time_range, mae_u_crank_nicolson_1, label="К-Н. 2т-ная 1")
+    # plt.plot(time_range, mae_u_crank_nicolson_2, label="К-Н. 3т. 2")
+    # plt.plot(time_range, mae_u_crank_nicolson_3, label="К-Н. 2т. 2")
+
+
     plt.xlabel('t')
-    plt.ylabel('MAE(u(x, t), U(x, t))')
+    plt.ylabel('mae(u(x, t), U(x, t))')
   
-    plt.title('Зависимость погрешности от параметра t')
+    plt.title('Прогрешности t')
     plt.axhline(0, color='black', linewidth=1)
     plt.axvline(0, color='black', linewidth=1)
     plt.legend()
@@ -255,7 +254,7 @@ if __name__ == "__main__":
     time_index = 5
     x = np.linspace(L, R, n + 1)
 
-    plt.figure(figsize=(12, 8))
+    plt.figure(figsize=(10, 5))
     current_time = time(time_index, tau)
     u_analytic_values = [u_real(current_time, xi(L, i, h)) for i in range(n + 1)]
     
