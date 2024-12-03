@@ -60,7 +60,7 @@ def explicit(n, L, R, K, T, approximation_type=1):
             )
        
 
-        # Дирихле на x=0
+        # x=0
         u[k][0] = u_left(time(k, tau))
 
         # Граничные условия    
@@ -86,6 +86,8 @@ def explicit(n, L, R, K, T, approximation_type=1):
             )
 
     return u
+
+
 def implicit(n, L, R, K, T, approx=1):
     u = np.zeros((K + 1, n + 1))
     tau = T / K
@@ -109,7 +111,7 @@ def implicit(n, L, R, K, T, approx=1):
 
         # Граничные условия
         if approx == 1:
-            # x=0 (условие Дирихле)
+            # x=0
             a[0] = 0
             b[0] = 1
             c[0] = 0
@@ -122,13 +124,13 @@ def implicit(n, L, R, K, T, approx=1):
             d[-1] = ux_right(time(k + 1, tau)) * h
 
         elif approx == 2:
-            # x=0 (условие Дирихле)
+            # x=0 
             a[0] = 0
             b[0] = 1
             c[0] = 0
             d[0] = u_left(time(k + 1, tau))
 
-            # x=R (условие Неймана, трехточечная аппроксимация второго порядка)
+            # x=R трехточечная аппроксимация второго порядка)
             a[-1] = -1 / (2 * h)  # Коэффициент при u_{n-1}^{k+1}
             b[-1] = 0             # Коэффициент при u_n^{k+1} (нулевой, переносим в правую часть)
             c[-1] = 1 / (2 * h)   # Коэффициент при u_{n-2}^{k+1}
@@ -155,7 +157,6 @@ def implicit(n, L, R, K, T, approx=1):
         else:
             raise ValueError("Invalid approximation type. Choose approx=1, 2, or 3.")
 
-        # Решение трехдиагональной системы
         solve = solve_triag(a, b, c, d)
         u[k + 1] = solve
 
@@ -271,7 +272,7 @@ if __name__ == "__main__":
     implicit_2 = implicit(n, L, R, K, T, approx=2)
     implicit_3 = implicit(n, L, R, K, T, approx=3)
 
-    theta=1
+    theta=0.5
     cn_1 = CN_method(n, L, R, K, T, approx=1, theta=theta)
     cn_2 = CN_method(n, L, R, K, T, approx=2, theta=theta)
     cn_3 = CN_method(n, L, R, K, T, approx=3, theta=theta)
@@ -311,7 +312,6 @@ if __name__ == "__main__":
 
 
     # Построение графика погрешности
-    
     plt.figure(figsize=(10, 5))
     plt.plot(time_range, mae_u_explicit_1, label="Явная. 2т-ная. схема 1-го порядка")
     plt.plot(time_range, mae_u_explicit_2, label="Явная 3т-ная схема 2-го порядка")
@@ -355,9 +355,6 @@ if __name__ == "__main__":
     u_implicit_3_values = [implicit_3[time_index][i] for i in range(n + 1)]
     
     u_crank_nicolson_1_values = [cn_1[time_index][i] for i in range(n + 1)]
-
-    # print([x for x in implicit_2])
-
     u_crank_nicolson_2_values = [cn_2[time_index][i] for i in range(n + 1)]
     u_crank_nicolson_3_values = [cn_3[time_index][i] for i in range(n + 1)]
 
