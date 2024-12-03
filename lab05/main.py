@@ -2,6 +2,8 @@ import matplotlib.pyplot as plt
 from math import sin, cos, pi
 
 from triag import solve_triag
+from utils import max_abs_error
+
 import numpy as np
 
 
@@ -18,11 +20,11 @@ def f(t, x):
 
 # u(x=0, t)
 def u_left(t):
-    return sin(t)  # Дирихле на x=0
+    return sin(t)  
 
 # u(x=pi/2, t)
 def ux_right(t):
-    return -sin(t)  # Нейман на x=pi/2
+    return -sin(t) 
 
 # начальное условие
 def u_start(x):
@@ -84,79 +86,79 @@ def explicit(n, L, R, K, T, approximation_type=1):
             )
 
     return u
-
-
-
 def implicit(n, L, R, K, T, approx=1):
     u = np.zeros((K + 1, n + 1))
     tau = T / K
     h = (R - L) / n
     sigma = tau / (h * h)
-    
-    # at time=0
+
     for i in range(n + 1):
         u[0][i] = u_start(xi(L, i, h))
-    
+
     for k in range(K):
         a = np.zeros(n + 1)
         b = np.zeros(n + 1)
         c = np.zeros(n + 1)
         d = np.zeros(n + 1)
-        
+
         for i in range(1, n):
-            a[i] = sigma
-            b[i] = -1 - 2 * sigma
-            c[i] = sigma
-            d[i] = -u[k][i] - tau * f(time(k + 1, tau), xi(L, i, h))
-        
+            a[i] = -sigma
+            b[i] = 1 + 2 * sigma
+            c[i] = -sigma
+            d[i] = u[k][i] + tau * f(time(k + 1, tau), xi(L, i, h))
+
         # Граничные условия
         if approx == 1:
-            # x=0
-            a[0] = 0
-            b[0] = 1
-            c[0] = 0
-            d[0] = u_left(time(k + 1, tau))
-            
-            # x=R
-            a[-1] = -1
-            b[-1] = 1
-            c[-1] = 0
-            d[-1] = ux_right(time(k + 1, tau)) * h
-       
-        elif approx == 2:
-            # x=0
-            a[0] = 0
-            b[0] = 1
-            c[0] = 0
-            
-            d[0] = u_left(time(k + 1, tau))
-            
-            # Трехточечная аппроксимация второго  на x=R
-            a[-1] = -1 / (2 * h)
-            b[-1] = 0
-            c[-1] = 1 / (2 * h)
-            d[-1] = ux_right(time(k + 1, tau))
-       
-        elif approx == 3:
-            # x=0
+            # x=0 (условие Дирихле)
             a[0] = 0
             b[0] = 1
             c[0] = 0
             d[0] = u_left(time(k + 1, tau))
 
-            # Двухточечная аппроксимация второго порядка на x=R
-            g = (h * h) / (2 * tau)
-            a[-1] = 1
-            b[-1] = -1 - g
+            # x=R (условие Неймана, двухточечная аппроксимация первого порядка)
+            a[-1] = -1
+            b[-1] = 1
             c[-1] = 0
+            d[-1] = ux_right(time(k + 1, tau)) * h
+
+        elif approx == 2:
+            # x=0 (условие Дирихле)
+            a[0] = 0
+            b[0] = 1
+            c[0] = 0
+            d[0] = u_left(time(k + 1, tau))
+
+            # x=R (условие Неймана, трехточечная аппроксимация второго порядка)
+            a[-1] = -1 / (2 * h)  # Коэффициент при u_{n-1}^{k+1}
+            b[-1] = 0             # Коэффициент при u_n^{k+1} (нулевой, переносим в правую часть)
+            c[-1] = 1 / (2 * h)   # Коэффициент при u_{n-2}^{k+1}
+            d[-1] = ux_right(time(k + 1, tau))
+
+        elif approx == 3:
+            # x=0 (условие Дирихле)
+            a[0] = 0
+            b[0] = 1
+            c[0] = 0
+            d[0] = u_left(time(k + 1, tau))
+
+            # x=R (условие Неймана, двухточечная аппроксимация второго порядка с учетом времени)
+            g = (h * h) / (2 * tau)
+            a[-1] = 1                 # Коэффициент при u_{n-1}^{k+1}
+            b[-1] = -1 - g            # Коэффициент при u_n^{k+1}
+            c[-1] = 0                 # Нет зависимости от u_{n+1}^{k+1}
             d[-1] = (
-                -g * u[k][-1] -
-                g * tau * f(time(k + 1, tau), xi(L, n, h)) -
-                h * ux_right(time(k + 1, tau))
+                -g * u[k][-1]
+                - g * tau * f(time(k + 1, tau), xi(L, n, h))
+                - h * ux_right(time(k + 1, tau))
             )
+
+        else:
+            raise ValueError("Invalid approximation type. Choose approx=1, 2, or 3.")
+
+        # Решение трехдиагональной системы
         solve = solve_triag(a, b, c, d)
         u[k + 1] = solve
-    
+
     return u
 
 
@@ -168,7 +170,7 @@ def CN_method(n, L, R, K, T, approx=1, theta=0.5):
     h = (R - L) / n
     sigma = tau / (h * h)
 
-    # Initialize u at time k=0
+    # time=0
     for i in range(n + 1):
         u[0][i] = u_start(xi(L, i, h))
     
@@ -178,11 +180,9 @@ def CN_method(n, L, R, K, T, approx=1, theta=0.5):
         c = np.zeros(n + 1)
         d = np.zeros(n + 1)
         
-        # Compute f at times k and k+1
         f_k = np.array([f(time(k, tau), xi(L, i, h)) for i in range(n + 1)])
         f_k1 = np.array([f(time(k + 1, tau), xi(L, i, h)) for i in range(n + 1)])
 
-        # Interior nodes
         for i in range(1, n):
             a[i] = - theta * sigma
             b[i] = 1 + 2 * theta * sigma
@@ -195,13 +195,13 @@ def CN_method(n, L, R, K, T, approx=1, theta=0.5):
         
         # Boundary conditions
         if approx == 1:
-            # x=0, Dirichlet boundary condition
+            # x=0
             a[0] = 0
             b[0] = 1
             c[0] = 0
             d[0] = u_left(time(k + 1, tau))
             
-            # x=R, Neumann boundary condition, first-order approximation
+            # x=R, first-order approximation
             # (-u_{n-1}^{k+1} + u_n^{k+1}) = ux_right * h
             a[n] = -1
             b[n] = 1
@@ -209,21 +209,20 @@ def CN_method(n, L, R, K, T, approx=1, theta=0.5):
             d[n] = ux_right(time(k + 1, tau)) * h
 
         elif approx == 2:
-            # x=0, Dirichlet boundary condition
+            # x=0 (условие Дирихле)
             a[0] = 0
             b[0] = 1
             c[0] = 0
             d[0] = u_left(time(k + 1, tau))
-            
-            # x=R, Neumann boundary condition, second-order approximation (three-point)
-            # ( -u_{n-2} + 4 * u_{n-1} - 3 * u_n ) / (2 * h) = ux_right
-            a[n - 2] = -1 / (2 * h)
-            b[n - 1] = 4 / (2 * h)
-            c[n] = -3 / (2 * h)
-            d[n] = ux_right(time(k + 1, tau))
+
+            # x=R (условие Неймана, трехточечная аппроксимация второго порядка)
+            a[-1] = -1 / (2 * h)  # Коэффициент при u_{n-1}^{k+1}
+            b[-1] = 0             # Коэффициент при u_n^{k+1} (нулевой, переносим в правую часть)
+            c[-1] = 1 / (2 * h)   # Коэффициент при u_{n-2}^{k+1}
+            d[-1] = ux_right(time(k + 1, tau))
         
         elif approx == 3:
-            # x=0, Dirichlet boundary condition
+            # x=0
             a[0] = 0
             b[0] = 1
             c[0] = 0
@@ -240,7 +239,6 @@ def CN_method(n, L, R, K, T, approx=1, theta=0.5):
                 h * ux_right(time(k + 1, tau))
             )
         
-        # Solve the tridiagonal system
         solve = solve_triag(a, b, c, d)
         u[k + 1] = solve
 
@@ -273,10 +271,10 @@ if __name__ == "__main__":
     implicit_2 = implicit(n, L, R, K, T, approx=2)
     implicit_3 = implicit(n, L, R, K, T, approx=3)
 
-    theta=0
-    u_crank_nicolson_1 = CN_method(n, L, R, K, T, approx=1, theta=theta)
-    u_crank_nicolson_2 = CN_method(n, L, R, K, T, approx=2, theta=theta)
-    u_crank_nicolson_3 = CN_method(n, L, R, K, T, approx=3, theta=theta)
+    theta=1
+    cn_1 = CN_method(n, L, R, K, T, approx=1, theta=theta)
+    cn_2 = CN_method(n, L, R, K, T, approx=2, theta=theta)
+    cn_3 = CN_method(n, L, R, K, T, approx=3, theta=theta)
 
     # вычисление ошибок
     tau = T / K
@@ -306,9 +304,11 @@ if __name__ == "__main__":
         mae_u_implicit_3[k] = np.mean(np.abs(implicit_3[k] - analytical))
     
 
-        mae_u_crank_nicolson_1[k] = np.mean(np.abs(u_crank_nicolson_1[k] - analytical))
-        mae_u_crank_nicolson_2[k] = np.mean(np.abs(u_crank_nicolson_2[k] - analytical))
-        mae_u_crank_nicolson_3[k] = np.mean(np.abs(u_crank_nicolson_3[k] - analytical))
+        mae_u_crank_nicolson_1[k] = np.mean(np.abs(cn_1[k] - analytical))
+        mae_u_crank_nicolson_2[k] = np.mean(np.abs(cn_2[k] - analytical))
+        mae_u_crank_nicolson_3[k] = np.mean(np.abs(cn_3[k] - analytical))
+
+
 
     # Построение графика погрешности
     
@@ -317,9 +317,9 @@ if __name__ == "__main__":
     plt.plot(time_range, mae_u_explicit_2, label="Явная 3т-ная схема 2-го порядка")
     plt.plot(time_range, mae_u_explicit_3, label="Явная. 2т-ная схема 2-го порядка")
     
-    # plt.plot(time_range, mae_u_implicit_1, label="Неявная. 2т-ная. схема 1-го порядка")
-    # plt.plot(time_range, mae_u_implicit_2, label="Неявн. 3т-ная схема 2-го порядка")
-    # plt.plot(time_range, mae_u_implicit_3, label="Неявн. 2т-ная схема 2-го порядка")
+    plt.plot(time_range, mae_u_implicit_1, label="Неявная. 2т-ная. схема 1-го порядка")
+    plt.plot(time_range, mae_u_implicit_2, label="Неявн. 3т-ная схема 2-го порядка")
+    plt.plot(time_range, mae_u_implicit_3, label="Неявн. 2т-ная схема 2-го порядка")
     
     
     plt.plot(time_range, mae_u_crank_nicolson_1, label="KN. 2т-ная. схема 1-го порядка")
@@ -354,9 +354,29 @@ if __name__ == "__main__":
     u_implicit_2_values = [implicit_2[time_index][i] for i in range(n + 1)]
     u_implicit_3_values = [implicit_3[time_index][i] for i in range(n + 1)]
     
-    u_crank_nicolson_1_values = [u_crank_nicolson_1[time_index][i] for i in range(n + 1)]
-    u_crank_nicolson_2_values = [u_crank_nicolson_2[time_index][i] for i in range(n + 1)]
-    u_crank_nicolson_3_values = [u_crank_nicolson_3[time_index][i] for i in range(n + 1)]
+    u_crank_nicolson_1_values = [cn_1[time_index][i] for i in range(n + 1)]
+
+    # print([x for x in implicit_2])
+
+    u_crank_nicolson_2_values = [cn_2[time_index][i] for i in range(n + 1)]
+    u_crank_nicolson_3_values = [cn_3[time_index][i] for i in range(n + 1)]
+
+
+    print("max abs error explicit 1", max_abs_error(u_explicit_1_values, u_analytic_values))
+    print("max abs error explicit 2", max_abs_error(u_explicit_2_values, u_analytic_values))
+    print("max abs error explicit 3", max_abs_error(u_explicit_3_values, u_analytic_values))
+
+
+    print("max abs error implicit 1", max_abs_error(u_implicit_1_values, u_analytic_values))
+    print("max abs error implicit 2", max_abs_error(u_implicit_2_values, u_analytic_values))
+    print("max abs error implicit 3", max_abs_error(u_implicit_3_values, u_analytic_values))
+
+
+    print("max abs error CN1", max_abs_error(u_crank_nicolson_1_values, u_analytic_values))
+    print("max abs error CN2", max_abs_error(u_crank_nicolson_2_values, u_analytic_values))
+    print("max abs error CN3", max_abs_error(u_crank_nicolson_3_values, u_analytic_values))
+
+
 
 
     plt.plot(x, u_analytic_values, label=f'Аналитическое, t = {current_time}')
@@ -383,4 +403,5 @@ if __name__ == "__main__":
     plt.legend()
     plt.grid()
     plt.show()
+
 
