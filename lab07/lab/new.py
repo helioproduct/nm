@@ -2,7 +2,6 @@ import math
 import numpy as np
 import matplotlib.pyplot as plt
 
-# Граничные условия (см. условие задачи)
 def phi_0(y):  # u(0,y)=0
     return 0.0
 
@@ -294,10 +293,20 @@ if __name__=="__main__":
         plt.colorbar(surf, shrink=0.5, aspect=10)
         plt.show()
 
-    plot_3d_surface(x_vals, y_vals, sol_jacobi, "Jacobi method: u(x,y)")
-    plot_3d_surface(x_vals, y_vals, sol_seidel, "Seidel method: u(x,y)")
-    plot_3d_surface(x_vals, y_vals, sol_relax, "Relaxation (w=1.5): u(x,y)")
-    plot_3d_surface(x_vals, y_vals, u_exact, "Exact solution: u(x,y)")
 
+    plot_3d_surface(x_vals, y_vals, u_exact, "real solution: u(x,y)")
+
+
+    plot_3d_surface(x_vals, y_vals, sol_jacobi, "Jacobi method: u(x,y)")
+    error = np.abs(sol_jacobi - u_exact)
+    plot_3d_surface(x_vals, y_vals, error, "Error (Jacobi)")
+
+    
+    plot_3d_surface(x_vals, y_vals, sol_seidel, "Seidel method: u(x,y)")
+    error = np.abs(sol_seidel - u_exact)
+    plot_3d_surface(x_vals, y_vals, error, "Error (Seidel)")
+
+
+    plot_3d_surface(x_vals, y_vals, sol_relax, "Relaxation (w=1.5): u(x,y)")
     error_relax = np.abs(sol_relax - u_exact)
     plot_3d_surface(x_vals, y_vals, error_relax, "Error (Relaxation w=1.5)")
