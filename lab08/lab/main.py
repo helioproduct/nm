@@ -231,7 +231,7 @@ def step_y_fractional(u_in, x_vals, y_vals, a, hx, hy, tau, t_n):
 if __name__ == "__main__":
     a = 1.0
     T = 1.0
-    Nx, Ny, K = 30, 30, 30
+    Nx, Ny, K = 100, 50, 50
 
     U_analytic = solve_analytic(a, Nx, Ny, K, T)
     U_mpn = solve_mpn(a, Nx, Ny, K, T)

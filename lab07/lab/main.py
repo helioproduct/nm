@@ -2,44 +2,12 @@ import math
 import numpy as np
 import matplotlib.pyplot as plt
 
-def phi_0(y):  # u(0,y)=0
-    return 0.0
-
-def phi_1(y):  # u(pi/2,y)=y
-    return y
-
-def psi_0(x):  # u(x,0)=0
-    return 0.0
-
-def psi_1(x):  # u(x,1)=sin(x)
-    return math.sin(x)
-
-def solution(x, y):
-    return y * math.sin(x)
-
-def get_analytical_solution(x_range, y_range, h_x, h_y):
-    x_vals = np.arange(x_range[0], x_range[1] + 1e-12, h_x)
-    y_vals = np.arange(y_range[0], y_range[1] + 1e-12, h_y)
-    res = np.zeros((len(x_vals), len(y_vals)))
-    for i,xv in enumerate(x_vals):
-        for j,yv in enumerate(y_vals):
-            res[i,j] = solution(xv,yv)
-    return x_vals, y_vals, res
-
-def max_abs_error(A, B):
-    assert A.shape == B.shape
-    return np.max(np.abs(A - B))
-
-def mean_abs_error(A, B):
-    assert A.shape == B.shape
-    return np.mean(np.abs(A - B))
-
 def L2_norm(vec: np.ndarray):
     return np.sqrt(np.sum(vec*vec))
 
 def iterative(A, b, eps):
     """
-    Якоби (простых итераций).
+    Метод Якоби (простых итераций).
     """
     n = A.shape[0]
     alpha = np.zeros_like(A, dtype=float)
@@ -75,7 +43,7 @@ def seidel_multiplication(alpha, x, beta):
 
 def seidel(A, b, eps):
     """
-    Гаусс–Зейдель
+    Метод Гаусса–Зейделя.
     """
     n = A.shape[0]
     alpha = np.zeros_like(A, dtype=float)
@@ -119,109 +87,83 @@ def relaxation(A, b, eps, w=1.5):
     iterations = 0
     while True:
         x_prev = x_cur.copy()
-        # seidel step
+        # шаг Зейделя
         x_inter = seidel_multiplication(alpha, x_cur, beta)
-        # relaxation
+        # релаксация
         x_cur = w*x_inter + (1-w)*x_prev
         iterations += 1
         if L2_norm(x_cur - x_prev) < eps:
             break
     return x_cur, iterations
 
-def finite_difference_schema(
+
+
+def finite_difference_schema_mixed(
     x_range, y_range,
     h_x, h_y,
     method,
-    phi_0, phi_1, psi_0, psi_1,
     eps=1e-7
 ):
-    """
-    Собирает СЛАУ для уравнения: ∆u + u=0
-    с Дирихле ГУ:
-        u(0,y)=phi_0(y),
-        u(x_end,y)=phi_1(y),
-        u(x,0)=psi_0(x),
-        u(x,y_end)=psi_1(x).
-    Решает методом 'method'.
-    Возвращает (res, num_iters, x_vals, y_vals),
-    где res.shape=(Nx,Ny) — это 2D-массив сеточного решения.
-    """
-    x_vals = np.arange(x_range[0], x_range[1]+1e-12, h_x)
-    y_vals = np.arange(y_range[0], y_range[1]+1e-12, h_y)
+
+    x_vals = np.arange(x_range[0], x_range[1] + 1e-14, h_x)
+    y_vals = np.arange(y_range[0], y_range[1] + 1e-14, h_y)
     Nx = len(x_vals)
     Ny = len(y_vals)
 
-    # Инициализируем массив решения, проставим граничные условия
-    res = np.zeros((Nx, Ny))
-    # ГУ по x=0, x=x_end
-    for j in range(Ny):
-        res[0, j]   = phi_0(y_vals[j])   # x=0
-        res[Nx-1,j] = phi_1(y_vals[j])   # x= x_end
-    # ГУ по y=0, y=y_end
+    N = Nx * Ny
+    A = np.zeros((N, N), dtype=float)
+    b = np.zeros(N, dtype=float)
+
+    def idx(i,j):
+        return i*Ny + j
+
+    res = np.zeros((Nx, Ny), dtype=float)
+
     for i in range(Nx):
-        res[i, 0]   = psi_0(x_vals[i])  # y=0
-        res[i, Ny-1]= psi_1(x_vals[i])  # y=1
+        for j in range(Ny):
+            I = idx(i,j) 
 
-    # СЛАУ для внутренних узлов (i=1..Nx-2, j=1..Ny-2)
-    # Шаблон:   (1/hx^2)(u[i+1,j]+u[i-1,j]) + (1/hy^2)(u[i,j+1]+u[i,j-1])
-    #           + ( -2/hx^2 - 2/hy^2 + 1 )*u[i,j] = 0
-    mapping = -1 * np.ones((Nx,Ny), dtype=int)
-    eq_id = 0
-    for i in range(1, Nx-1):
-        for j in range(1, Ny-1):
-            mapping[i,j] = eq_id
-            eq_id += 1
-    N_equations = eq_id
+            x_ij = x_vals[i]
+            y_ij = y_vals[j]
 
-    A = np.zeros((N_equations, N_equations), dtype=float)
-    b = np.zeros(N_equations, dtype=float)
+            if i == 0:
+                A[I,I] = 1.0
+                b[I]   = 0.0
+                continue
 
-    def is_boundary(i,j):
-        return (i==0 or i==Nx-1 or j==0 or j==Ny-1)
+            if i == Nx-1:
+                A[I,I] = 1.0
+                b[I]   = y_ij
+                continue
 
-    for i in range(1, Nx-1):
-        for j in range(1, Ny-1):
-            eq_index = mapping[i,j]
-            # центр:
-            center_coef = (-2.0/h_x**2 - 2.0/h_y**2 + 1.0)
-            A[eq_index, eq_index] = center_coef
+            if j == 0:
+                A[I,I] = -1.0/h_y
+                A[I,idx(i, j+1)] = 1.0/h_y
+                b[I] = math.sin(x_ij)
+                continue
 
-            # сосед (i+1,j)
-            if is_boundary(i+1,j):
-                val = res[i+1,j]
-                b[eq_index] -= (val / h_x**2)
-            else:
-                A[eq_index, mapping[i+1,j]] += (1.0/h_x**2)
+            if j == Ny-1:
+                A[I,I] =  1.0/h_y - 1.0
+                A[I, idx(i, j-1)] = -1.0/h_y
+                b[I] = 0.0
+                continue
 
-            # сосед (i-1,j)
-            if is_boundary(i-1,j):
-                val = res[i-1,j]
-                b[eq_index] -= (val / h_x**2)
-            else:
-                A[eq_index, mapping[i-1,j]] += (1.0/h_x**2)
 
-            # сосед (i,j+1)
-            if is_boundary(i,j+1):
-                val = res[i,j+1]
-                b[eq_index] -= (val / h_y**2)
-            else:
-                A[eq_index, mapping[i,j+1]] += (1.0/h_y**2)
+            A[I,I] = -2.0/h_x**2 - 2.0/h_y**2 + 1.0
+            A[I, idx(i+1,j)] += 1.0/h_x**2
+            A[I, idx(i-1,j)] += 1.0/h_x**2
+            A[I, idx(i,j+1)] += 1.0/h_y**2
+            A[I, idx(i,j-1)] += 1.0/h_y**2
 
-            # сосед (i,j-1)
-            if is_boundary(i,j-1):
-                val = res[i,j-1]
-                b[eq_index] -= (val / h_y**2)
-            else:
-                A[eq_index, mapping[i,j-1]] += (1.0/h_y**2)
-
-    # Ax=b -> x
     x_sol, num_iters = method(A, b, eps)
-    for i in range(1, Nx-1):
-        for j in range(1, Ny-1):
-            eq_index = mapping[i,j]
-            res[i,j] = x_sol[eq_index]
+
+    for i in range(Nx):
+        for j in range(Ny):
+            I = idx(i,j)
+            res[i,j] = x_sol[I]
 
     return res, num_iters, x_vals, y_vals
+
 
 if __name__=="__main__":
 
@@ -229,50 +171,49 @@ if __name__=="__main__":
     x_end   = math.pi/2
     y_begin = 0.0
     y_end   = 1.0
-    h_x     = 0.05
-    h_y     = 0.05
-    eps = 10e-4
+    h_x     = 0.1
+    h_y     = 0.1
+    eps = 1e-4
 
-    x_vals, y_vals, u_exact = get_analytical_solution(
-        (x_begin, x_end),
-        (y_begin, y_end),
-        h_x, h_y
-    )
+    def solution(x, y):
+        return y * math.sin(x)
 
-    # 2) Методы: Якоби
-    sol_jacobi, it_jacobi, Xn, Yn = finite_difference_schema(
+    x_vals = np.arange(x_begin, x_end+1e-14, h_x)
+    y_vals = np.arange(y_begin, y_end+1e-14, h_y)
+    u_exact = np.zeros((len(x_vals), len(y_vals)))
+    for i, xv in enumerate(x_vals):
+        for j, yv in enumerate(y_vals):
+            u_exact[i,j] = solution(xv, yv)
+
+    sol_jacobi, it_jacobi, Xn, Yn = finite_difference_schema_mixed(
         (x_begin, x_end),
         (y_begin, y_end),
         h_x, h_y,
         method=iterative,
-        phi_0=phi_0, phi_1=phi_1,
-        psi_0=psi_0, psi_1=psi_1,
         eps=eps
     )
     print("[Jacobi] iters =", it_jacobi)
+    def max_abs_error(A, B):
+        return np.max(np.abs(A - B))
     print("[Jacobi] max_error =", max_abs_error(sol_jacobi, u_exact))
 
-    # метод Зейделя
-    sol_seidel, it_seid, _, _ = finite_difference_schema(
+    #--- (2) Зейдель
+    sol_seidel, it_seid, _, _ = finite_difference_schema_mixed(
         (x_begin, x_end),
         (y_begin, y_end),
         h_x, h_y,
         method=seidel,
-        phi_0=phi_0, phi_1=phi_1,
-        psi_0=psi_0, psi_1=psi_1,
         eps=eps
     )
     print("[Seidel] iters =", it_seid)
     print("[Seidel] max_error =", max_abs_error(sol_seidel, u_exact))
 
-    # методы релаксации
-    sol_relax, it_relax, _, _ = finite_difference_schema(
+    #--- (3) Релаксация
+    sol_relax, it_relax, _, _ = finite_difference_schema_mixed(
         (x_begin, x_end),
         (y_begin, y_end),
         h_x, h_y,
         method=lambda A,b,eps: relaxation(A,b,eps,w=1.5),
-        phi_0=phi_0, phi_1=phi_1,
-        psi_0=psi_0, psi_1=psi_1,
         eps=eps
     )
     print("[Relax w=1.5] iters =", it_relax)
@@ -291,20 +232,13 @@ if __name__=="__main__":
         plt.colorbar(surf, shrink=0.5, aspect=10)
         plt.show()
 
+    plot_3d_surface(x_vals, y_vals, u_exact, "Analytical solution (if valid)")
 
-    plot_3d_surface(x_vals, y_vals, u_exact, "real solution: u(x,y)")
+    plot_3d_surface(x_vals, y_vals, sol_jacobi, "Jacobi method")
+    plot_3d_surface(x_vals, y_vals, np.abs(sol_jacobi - u_exact), "Error (Jacobi)")
 
+    plot_3d_surface(x_vals, y_vals, sol_seidel, "Seidel method")
+    plot_3d_surface(x_vals, y_vals, np.abs(sol_seidel - u_exact), "Error (Seidel)")
 
-    plot_3d_surface(x_vals, y_vals, sol_jacobi, "Jacobi method: u(x,y)")
-    error = np.abs(sol_jacobi - u_exact)
-    plot_3d_surface(x_vals, y_vals, error, "Error (Jacobi)")
-
-    
-    plot_3d_surface(x_vals, y_vals, sol_seidel, "Seidel method: u(x,y)")
-    error = np.abs(sol_seidel - u_exact)
-    plot_3d_surface(x_vals, y_vals, error, "Error (Seidel)")
-
-
-    plot_3d_surface(x_vals, y_vals, sol_relax, "Relaxation (w=1.5): u(x,y)")
-    error_relax = np.abs(sol_relax - u_exact)
-    plot_3d_surface(x_vals, y_vals, error_relax, "Error (Relaxation w=1.5)")
+    plot_3d_surface(x_vals, y_vals, sol_relax, "SOR (w=1.5)")
+    plot_3d_surface(x_vals, y_vals, np.abs(sol_relax - u_exact), "Error (SOR w=1.5)")
