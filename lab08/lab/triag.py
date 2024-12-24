@@ -2,11 +2,6 @@ import numpy as np
 
 
 def TMA(a, b, c, d):
-    """
-    Метод прогонки (Thomas algorithm) для трёхдиагональной СЛАУ A*x = d.
-    a, b, c -- под- , главная, и над- диагонали, 
-    d       -- вектор правой части.
-    """
     n = len(d)
     P = np.zeros(n)
     Q = np.zeros(n)
