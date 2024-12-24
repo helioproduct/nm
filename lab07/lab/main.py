@@ -1,510 +1,310 @@
+import math
 import numpy as np
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D  # для построения 3D графиков
-from math import sin, pi, ceil
-from abc import ABC, abstractmethod
 
-MAX_ITERS = 100000
+def phi_0(y):  # u(0,y)=0
+    return 0.0
 
-def norm(A: np.ndarray, B: np.ndarray) -> float:
+def phi_1(y):  # u(pi/2,y)=y
+    return y
+
+def psi_0(x):  # u(x,0)=0
+    return 0.0
+
+def psi_1(x):  # u(x,1)=sin(x)
+    return math.sin(x)
+
+def solution(x, y):
+    return y * math.sin(x)
+
+def get_analytical_solution(x_range, y_range, h_x, h_y):
+    x_vals = np.arange(x_range[0], x_range[1] + 1e-12, h_x)
+    y_vals = np.arange(y_range[0], y_range[1] + 1e-12, h_y)
+    res = np.zeros((len(x_vals), len(y_vals)))
+    for i,xv in enumerate(x_vals):
+        for j,yv in enumerate(y_vals):
+            res[i,j] = solution(xv,yv)
+    return x_vals, y_vals, res
+
+def max_abs_error(A, B):
+    assert A.shape == B.shape
+    return np.max(np.abs(A - B))
+
+def mean_abs_error(A, B):
+    assert A.shape == B.shape
+    return np.mean(np.abs(A - B))
+
+def L2_norm(vec: np.ndarray):
+    return np.sqrt(np.sum(vec*vec))
+
+def iterative(A, b, eps):
     """
-    Евклидова норма (L2) разности двух матриц.
+    Якоби (простых итераций).
     """
-    assert A.shape == B.shape, "Матрицы должны быть одинакового размера"
-    diff = A - B
-    return np.sqrt(np.sum(diff**2))
+    n = A.shape[0]
+    alpha = np.zeros_like(A, dtype=float)
+    beta  = np.zeros(n, dtype=float)
+    for i in range(n):
+        diag = A[i,i]
+        for j in range(n):
+            if i==j:
+                alpha[i,j] = 0
+            else:
+                alpha[i,j] = -A[i,j]/diag
+        beta[i] = b[i]/diag
 
-# -------------------------------------------------------------------
-# 1. Класс задачи: PDE = d^2u/dx^2 + d^2u/dy^2 + u = 0
-#    Область: x in [0, pi/2], y in [0, 1]
-#    ГУ: u(0,y)=0, u(pi/2,y)=y, u(x,0)=0, u(x,1)=sin(x)
-#    Аналитика: U(x,y) = y sin x
-# -------------------------------------------------------------------
+    x_cur = np.copy(beta)
+    iterations = 0
+    while True:
+        x_prev = x_cur.copy()
+        x_cur  = alpha @ x_prev + beta
+        iterations += 1
+        if L2_norm(x_cur - x_prev) < eps:
+            break
+    return x_cur, iterations
 
-class ElipticEquation(ABC):
+def seidel_multiplication(alpha, x, beta):
+    n = len(x)
+    x_new = np.copy(x)
+    for i in range(n):
+        s = beta[i]
+        for j in range(n):
+            s += alpha[i,j]*x_new[j]
+        x_new[i] = s
+    return x_new
+
+def seidel(A, b, eps):
     """
-    Абстрактный класс-описание эллиптического уравнения и граничных условий.
+    Гаусс–Зейдель
     """
-    @abstractmethod
-    def Phi_1(self, y: float):
-        """ ГУ при x=0 """
-        pass
+    n = A.shape[0]
+    alpha = np.zeros_like(A, dtype=float)
+    beta  = np.zeros(n, dtype=float)
+    for i in range(n):
+        diag = A[i,i]
+        for j in range(n):
+            if i==j:
+                alpha[i,j] = 0
+            else:
+                alpha[i,j] = -A[i,j]/diag
+        beta[i] = b[i]/diag
 
-    @abstractmethod
-    def Phi_2(self, y: float):
-        """ ГУ при x = l1 (здесь pi/2) """
-        pass
+    x_cur = np.copy(beta)
+    iterations = 0
+    while True:
+        x_prev = x_cur.copy()
+        x_cur  = seidel_multiplication(alpha, x_cur, beta)
+        iterations += 1
+        if L2_norm(x_cur - x_prev) < eps:
+            break
+    return x_cur, iterations
+
+def relaxation(A, b, eps, w=1.5):
+    """
+    Метод верхней релаксации (SOR).
+    """
+    n = A.shape[0]
+    alpha = np.zeros_like(A, dtype=float)
+    beta  = np.zeros(n, dtype=float)
+    for i in range(n):
+        diag = A[i,i]
+        for j in range(n):
+            if i==j:
+                alpha[i,j] = 0
+            else:
+                alpha[i,j] = -A[i,j]/diag
+        beta[i] = b[i]/diag
+
+    x_cur = np.copy(beta)
+    iterations = 0
+    while True:
+        x_prev = x_cur.copy()
+        # seidel step
+        x_inter = seidel_multiplication(alpha, x_cur, beta)
+        # relaxation
+        x_cur = w*x_inter + (1-w)*x_prev
+        iterations += 1
+        if L2_norm(x_cur - x_prev) < eps:
+            break
+    return x_cur, iterations
+
+def finite_difference_schema(
+    x_range, y_range,
+    h_x, h_y,
+    method,
+    phi_0, phi_1, psi_0, psi_1,
+    eps=1e-7
+):
+    """
+    Собирает СЛАУ для уравнения: ∆u + u=0
+    с Дирихле ГУ:
+        u(0,y)=phi_0(y),
+        u(x_end,y)=phi_1(y),
+        u(x,0)=psi_0(x),
+        u(x,y_end)=psi_1(x).
+    Решает методом 'method'.
+    Возвращает (res, num_iters, x_vals, y_vals),
+    где res.shape=(Nx,Ny) — это 2D-массив сеточного решения.
+    """
+    x_vals = np.arange(x_range[0], x_range[1]+1e-12, h_x)
+    y_vals = np.arange(y_range[0], y_range[1]+1e-12, h_y)
+    Nx = len(x_vals)
+    Ny = len(y_vals)
+
+    # Инициализируем массив решения, проставим граничные условия
+    res = np.zeros((Nx, Ny))
+    # ГУ по x=0, x=x_end
+    for j in range(Ny):
+        res[0, j]   = phi_0(y_vals[j])   # x=0
+        res[Nx-1,j] = phi_1(y_vals[j])   # x= x_end
+    # ГУ по y=0, y=y_end
+    for i in range(Nx):
+        res[i, 0]   = psi_0(x_vals[i])  # y=0
+        res[i, Ny-1]= psi_1(x_vals[i])  # y=1
+
+    # СЛАУ для внутренних узлов (i=1..Nx-2, j=1..Ny-2)
+    # Шаблон:   (1/hx^2)(u[i+1,j]+u[i-1,j]) + (1/hy^2)(u[i,j+1]+u[i,j-1])
+    #           + ( -2/hx^2 - 2/hy^2 + 1 )*u[i,j] = 0
+    mapping = -1 * np.ones((Nx,Ny), dtype=int)
+    eq_id = 0
+    for i in range(1, Nx-1):
+        for j in range(1, Ny-1):
+            mapping[i,j] = eq_id
+            eq_id += 1
+    N_equations = eq_id
+
+    A = np.zeros((N_equations, N_equations), dtype=float)
+    b = np.zeros(N_equations, dtype=float)
+
+    def is_boundary(i,j):
+        return (i==0 or i==Nx-1 or j==0 or j==Ny-1)
+
+    for i in range(1, Nx-1):
+        for j in range(1, Ny-1):
+            eq_index = mapping[i,j]
+            # центр:
+            center_coef = (-2.0/h_x**2 - 2.0/h_y**2 + 1.0)
+            A[eq_index, eq_index] = center_coef
+
+            # сосед (i+1,j)
+            if is_boundary(i+1,j):
+                val = res[i+1,j]
+                b[eq_index] -= (val / h_x**2)
+            else:
+                A[eq_index, mapping[i+1,j]] += (1.0/h_x**2)
+
+            # сосед (i-1,j)
+            if is_boundary(i-1,j):
+                val = res[i-1,j]
+                b[eq_index] -= (val / h_x**2)
+            else:
+                A[eq_index, mapping[i-1,j]] += (1.0/h_x**2)
+
+            # сосед (i,j+1)
+            if is_boundary(i,j+1):
+                val = res[i,j+1]
+                b[eq_index] -= (val / h_y**2)
+            else:
+                A[eq_index, mapping[i,j+1]] += (1.0/h_y**2)
+
+            # сосед (i,j-1)
+            if is_boundary(i,j-1):
+                val = res[i,j-1]
+                b[eq_index] -= (val / h_y**2)
+            else:
+                A[eq_index, mapping[i,j-1]] += (1.0/h_y**2)
+
+    # Ax=b -> x
+    x_sol, num_iters = method(A, b, eps)
+    for i in range(1, Nx-1):
+        for j in range(1, Ny-1):
+            eq_index = mapping[i,j]
+            res[i,j] = x_sol[eq_index]
+
+    return res, num_iters, x_vals, y_vals
+
+if __name__=="__main__":
+
+    x_begin = 0.0
+    x_end   = math.pi/2
+    y_begin = 0.0
+    y_end   = 1.0
+    h_x     = 0.05
+    h_y     = 0.05
+    eps = 10e-4
+
+    x_vals, y_vals, u_exact = get_analytical_solution(
+        (x_begin, x_end),
+        (y_begin, y_end),
+        h_x, h_y
+    )
+
+    # 2) Методы: Якоби
+    sol_jacobi, it_jacobi, Xn, Yn = finite_difference_schema(
+        (x_begin, x_end),
+        (y_begin, y_end),
+        h_x, h_y,
+        method=iterative,
+        phi_0=phi_0, phi_1=phi_1,
+        psi_0=psi_0, psi_1=psi_1,
+        eps=eps
+    )
+    print("[Jacobi] iters =", it_jacobi)
+    print("[Jacobi] max_error =", max_abs_error(sol_jacobi, u_exact))
+
+    # метод Зейделя
+    sol_seidel, it_seid, _, _ = finite_difference_schema(
+        (x_begin, x_end),
+        (y_begin, y_end),
+        h_x, h_y,
+        method=seidel,
+        phi_0=phi_0, phi_1=phi_1,
+        psi_0=psi_0, psi_1=psi_1,
+        eps=eps
+    )
+    print("[Seidel] iters =", it_seid)
+    print("[Seidel] max_error =", max_abs_error(sol_seidel, u_exact))
+
+    # методы релаксации
+    sol_relax, it_relax, _, _ = finite_difference_schema(
+        (x_begin, x_end),
+        (y_begin, y_end),
+        h_x, h_y,
+        method=lambda A,b,eps: relaxation(A,b,eps,w=1.5),
+        phi_0=phi_0, phi_1=phi_1,
+        psi_0=psi_0, psi_1=psi_1,
+        eps=eps
+    )
+    print("[Relax w=1.5] iters =", it_relax)
+    print("[Relax w=1.5] max_error =", max_abs_error(sol_relax, u_exact))
+
+    def plot_3d_surface(x_arr, y_arr, z_2d, title="3D Surface"):
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        Xgrid, Ygrid = np.meshgrid(x_arr, y_arr)  # (ny,nx)
+        Zplot = z_2d.T
+        surf = ax.plot_surface(Xgrid, Ygrid, Zplot, cmap='viridis')
+        ax.set_title(title)
+        ax.set_xlabel("x")
+        ax.set_ylabel("y")
+        ax.set_zlabel("u(x,y)")
+        plt.colorbar(surf, shrink=0.5, aspect=10)
+        plt.show()
+
+
+    plot_3d_surface(x_vals, y_vals, u_exact, "real solution: u(x,y)")
+
+
+    plot_3d_surface(x_vals, y_vals, sol_jacobi, "Jacobi method: u(x,y)")
+    error = np.abs(sol_jacobi - u_exact)
+    plot_3d_surface(x_vals, y_vals, error, "Error (Jacobi)")
+
     
-    @abstractmethod
-    def Phi_3(self, x: float):
-        """ ГУ при y=0 """
-        pass
-    
-    @abstractmethod
-    def Phi_4(self, x: float):
-        """ ГУ при y = l2 (здесь 1) """
-        pass
+    plot_3d_surface(x_vals, y_vals, sol_seidel, "Seidel method: u(x,y)")
+    error = np.abs(sol_seidel - u_exact)
+    plot_3d_surface(x_vals, y_vals, error, "Error (Seidel)")
 
-    @abstractmethod
-    def U(self, x: float, y: float):
-        """ Аналитическое решение (если известно). """
-        pass
 
-    @abstractmethod
-    def f(self, x: float, y: float):
-        """
-        Правая часть в уравнении: ∆u - c*u = f(x,y).
-        Здесь c=-1 => ∆u + u=0 => f=0
-        """
-        pass
-
-    @property
-    @abstractmethod
-    def l1(self):
-        """ Левая/правая граница по x: [0, l1]. """
-        pass
-
-    @property
-    @abstractmethod
-    def l2(self):
-        """ Нижняя/верхняя граница по y: [0, l2]. """
-        pass
-
-    @property
-    @abstractmethod
-    def c(self):
-        """
-        Уравнение в виде: ∆u - c*u = 0.
-        Если у нас ∆u + u=0 => -c=+1 => c=-1.
-        """
-        pass
-
-class ElipticEquationUser(ElipticEquation):
-    """
-    d^2u/dx^2 + d^2u/dy^2 = -u  =>  ∆u + u=0
-    x in [0, pi/2], y in [0, 1]
-
-    ГУ:
-      u(0,y)=0
-      u(pi/2,y)=y
-      u(x,0)=0
-      u(x,1)=sin(x)
-
-    Аналитика: U(x,y) = y*sin(x).
-    """
-
-    def Phi_1(self, y: float):
-        # u(0,y)=0
-        return 0
-
-    def Phi_2(self, y: float):
-        # u(pi/2,y)= y
-        return y
-
-    def Phi_3(self, x: float):
-        # u(x,0)=0
-        return 0
-
-    def Phi_4(self, x: float):
-        # u(x,1)= sin(x)
-        return np.sin(x)
-
-    def U(self, x: float, y: float):
-        # Аналитическое решение
-        return y * np.sin(x)
-
-    def f(self, x: float, y: float):
-        # ∆u + u=0 => f=0
-        return 0
-
-    @property
-    def l1(self):
-        # x in [0, pi/2]
-        return pi/2
-
-    @property
-    def l2(self):
-        # y in [0, 1]
-        return 1
-
-    @property
-    def c(self):
-        # ∆u - c*u=0 => c=-1 => ∆u + u=0
-        return -1
-
-# -------------------------------------------------------------------
-# 2. Генерация сеток + Аналитический решатель (табулируем U).
-# -------------------------------------------------------------------
-
-class Solver(ABC):
-    @property
-    @abstractmethod
-    def equation(self) -> ElipticEquation:
-        pass
-
-    @abstractmethod
-    def solve(self):
-        pass
-
-def get_ranges(equation: ElipticEquation, delta: float):
-    """
-    Создаём 1D-сетки x и y с шагом delta, 
-    покрываем [0..l1], [0..l2].
-    Возвращаем x, y, hx, hy.
-    """
-    Nx = ceil(equation.l1 / delta)
-    Ny = ceil(equation.l2 / delta)
-    hx = equation.l1 / (Nx - 1)
-    hy = equation.l2 / (Ny - 1)
-    x = np.arange(0, equation.l1 + hx/2, hx)
-    y = np.arange(0, equation.l2 + hy/2, hy)
-    return x, y, hx, hy
-
-class AnalyticSolver(Solver):
-    """
-    "Решатель", который просто вычисляет y*sin(x) 
-    на сетке [0..pi/2]x[0..1].
-    """
-    def __init__(self, equation: ElipticEquation, delta=0.05):
-        self._equation = equation
-        self._delta = delta
-
-    @property
-    def equation(self) -> ElipticEquation:
-        return self._equation
-
-    def solve(self):
-        x, y, hx, hy = get_ranges(self.equation, self._delta)
-        u = np.zeros((len(x), len(y)))
-        for i in range(len(x)):
-            for j in range(len(y)):
-                u[i,j] = self.equation.U(x[i], y[j])
-        return x, y, u
-
-# -------------------------------------------------------------------
-# 3. Итерационные методы: Якоби, Зейдель, Релаксация (SOR)
-#    для PDE: ∆u + u=0 => (2/hx^2 + 2/hy^2 + 1)*u_ij = ...
-# -------------------------------------------------------------------
-
-class ApproximationMethod(ABC):
-    """
-    Базовый класс для итерационных схем (шаблон).
-    """
-    @property
-    @abstractmethod
-    def hx(self):
-        pass
-    
-    @property
-    @abstractmethod
-    def hy(self):
-        pass
-
-    @abstractmethod
-    def update(self, u: np.ndarray, u_prev: np.ndarray, i: int, j: int):
-        pass
-
-
-class JacobiMethod(ApproximationMethod):
-    """
-    Метод простых итераций (Якоби) для d^2u/dx^2 + d^2u/dy^2 + u=0.
-    Формула:
-      (2/hx^2 + 2/hy^2 + 1)*u[i,j] = (u[i+1,j] + u[i-1,j])/hx^2 + (u[i,j+1] + u[i,j-1])/hy^2
-    Используем все значения из "u_prev".
-    """
-    def __init__(self, hx, hy):
-        self._hx = hx
-        self._hy = hy
-
-    @property
-    def hx(self):
-        return self._hx
-    
-    @property
-    def hy(self):
-        return self._hy
-
-    def update(self, u: np.ndarray, u_prev: np.ndarray, i: int, j: int):
-        numerator = (
-            (u_prev[i+1,j] + u_prev[i-1,j]) / (self.hx**2)
-          + (u_prev[i,j+1] + u_prev[i,j-1]) / (self.hy**2)
-        )
-        denominator = 2.0/(self.hx**2) + 2.0/(self.hy**2) + 1.0
-        return numerator / denominator
-
-    def __str__(self):
-        return "JacobiMethod"
-
-
-class SeidelMethod(ApproximationMethod):
-    """
-    Метод Зейделя (Gauss–Seidel) для ∆u + u=0.
-    Отличие: u[i-1,j], u[i,j-1] берём из "u" (уже обновлено), 
-    а i+1,j, i,j+1 — из "u_prev".
-    """
-    def __init__(self, hx, hy):
-        self._hx = hx
-        self._hy = hy
-
-    @property
-    def hx(self):
-        return self._hx
-    
-    @property
-    def hy(self):
-        return self._hy
-
-    def update(self, u: np.ndarray, u_prev: np.ndarray, i: int, j: int):
-        numerator = (
-            (u_prev[i+1,j] + u[i-1,j]) / (self.hx**2)
-          + (u_prev[i,j+1] + u[i,j-1]) / (self.hy**2)
-        )
-        denominator = 2.0/(self.hx**2) + 2.0/(self.hy**2) + 1.0
-        return numerator / denominator
-
-    def __str__(self):
-        return "SeidelMethod"
-
-
-class RelaxationMethod(ApproximationMethod):
-    """
-    Метод верхней релаксации (SOR) для ∆u + u=0:
-      new_val = Jacobi_formula
-      u[i,j] = theta*new_val + (1 - theta)*u_prev[i,j]
-    """
-    def __init__(self, hx, hy, theta: float = 1.0):
-        self._hx = hx
-        self._hy = hy
-        self._theta = theta
-
-    @property
-    def hx(self):
-        return self._hx
-    
-    @property
-    def hy(self):
-        return self._hy
-
-    def update(self, u: np.ndarray, u_prev: np.ndarray, i: int, j: int):
-        numerator = (
-            (u_prev[i+1,j] + u[i-1,j]) / (self.hx**2)
-          + (u_prev[i,j+1] + u[i,j-1]) / (self.hy**2)
-        )
-        denominator = 2.0/(self.hx**2) + 2.0/(self.hy**2) + 1.0
-        jacobi_val = numerator / denominator
-        
-        return self._theta * jacobi_val + (1 - self._theta) * u_prev[i,j]
-
-    def __str__(self):
-        return f"RelaxationMethod(theta={self._theta:.2f})"
-
-# -------------------------------------------------------------------
-# 4. Численный решатель: строим сетку, итерируем, проверяем сходимость
-# -------------------------------------------------------------------
-
-class NumericSolver(Solver):
-    """
-    - Строит сетку (x,y),
-    - Инициализирует u граничными условиями,
-    - На каждой итерации вызывает method.update(...) для внутренних узлов,
-    - Проверяет \|u - u_prev\| < epsilon.
-    - (Опционально) собирает "макс. ошибку" на каждой итерации.
-    """
-    def __init__(self, equation: ElipticEquation, method: ApproximationMethod,
-                 delta=0.05, epsilon=1e-3):
-        self._equation = equation
-        self._method   = method
-        self._delta    = delta
-        self._epsilon  = epsilon
-
-        self.x, self.y, self.hx, self.hy = get_ranges(equation, self._delta)
-        self.nx, self.ny = len(self.x), len(self.y)
-
-    @property
-    def equation(self) -> ElipticEquation:
-        return self._equation
-
-    def _init_u(self):
-        """
-        Заполняем массив u граничными условиями (Дирихле).
-        """
-        u = np.zeros((self.nx, self.ny))
-
-        # x=0 -> i=0
-        for j in range(self.ny):
-            u[0,j] = self.equation.Phi_1(self.y[j])
-
-        # x=l1 -> i=nx-1
-        for j in range(self.ny):
-            u[self.nx-1,j] = self.equation.Phi_2(self.y[j])
-
-        # y=0 -> j=0
-        for i in range(self.nx):
-            u[i,0] = self.equation.Phi_3(self.x[i])
-
-        # y=l2 -> j=ny-1
-        for i in range(self.nx):
-            u[i,self.ny-1] = self.equation.Phi_4(self.x[i])
-
-        return u
-
-    def solve(self, return_history=False):
-        """
-        Если return_history=True, возвращает (u, history_max_error).
-        Иначе возвращает просто u.
-        """
-        u = self._init_u()
-
-        # Аналитика (для оценки ошибки)
-        uA = np.zeros_like(u)
-        for i in range(self.nx):
-            for j in range(self.ny):
-                uA[i,j] = self.equation.U(self.x[i], self.y[j])
-
-        history_max_err = []
-        count_iters = 0
-
-        while True:
-            count_iters += 1
-            u_prev = u.copy()
-
-            # Обновляем внутренние узлы
-            for i in range(1, self.nx - 1):
-                for j in range(1, self.ny - 1):
-                    u[i,j] = self._method.update(u, u_prev, i, j)
-
-            # Проверяем \|u - u_prev\|
-            diff = norm(u, u_prev)
-            if diff < self._epsilon:
-                # добавим финальную ошибку в историю, если нужно
-                curr_err = np.max(np.abs(u - uA))
-                history_max_err.append(curr_err)
-                break
-
-            if count_iters > MAX_ITERS:
-                raise StopIteration("Превышено максимальное число итераций")
-
-            # Сохраняем макс. ошибку |u - u_analytic|
-            if return_history:
-                curr_err = np.max(np.abs(u - uA))
-                history_max_err.append(curr_err)
-
-        # Выводим итог:
-        final_err = np.max(np.abs(u - uA))
-        print(f"{self._method} завершился за {count_iters} итераций, финальная max ошибка={final_err:.3e}")
-
-        if return_history:
-            return u, history_max_err
-        else:
-            return u
-
-
-# -------------------------------------------------------------------
-# 5. "main": Решаем PDE тремя методами, строим графики
-# -------------------------------------------------------------------
-
-if __name__ == "__main__":
-    # --- PDE: d^2u/dx^2 + d^2u/dy^2 + u=0, x in [0, pi/2], y in [0,1] ---
-    eq = ElipticEquationUser()
-
-    # Параметры сетки и точность
-    delta   = 0.01
-    epsilon = 1e-4
-    theta   = 1.5  # для SOR
-
-    # === Аналитическое решение ===
-    anal_solver = AnalyticSolver(eq, delta=delta)
-    xA, yA, uA = anal_solver.solve()  # uA.shape=(nx, ny)
-
-    # === Три итерационных метода ===
-    method_jacobi = JacobiMethod(hx=delta, hy=delta)
-    method_seidel = SeidelMethod(hx=delta, hy=delta)
-    method_relax  = RelaxationMethod(hx=delta, hy=delta, theta=theta)
-
-    # === "Решатели" ===
-    solver_jacobi = NumericSolver(eq, method_jacobi, delta=delta, epsilon=epsilon)
-    solver_seidel = NumericSolver(eq, method_seidel, delta=delta, epsilon=epsilon)
-    solver_relax  = NumericSolver(eq, method_relax,  delta=delta, epsilon=epsilon)
-
-    # Получаем численные решения + историю ошибки
-    u_jacobi, hist_jacobi  = solver_jacobi.solve(return_history=True)
-    u_seidel, hist_seidel  = solver_seidel.solve(return_history=True)
-    u_relax,  hist_relax   = solver_relax.solve(return_history=True)
-
-    # ------------------ 5.1 График сходимости ------------------
-    plt.figure(figsize=(7,4))
-    plt.plot(hist_jacobi, label="Jacobi")
-    plt.plot(hist_seidel, label="Seidel")
-    plt.plot(hist_relax,  label=f"Relax (theta={theta})")
-    plt.title("Сходимость: max|u - u_analytic| от итерации")
-    plt.yscale("log")
-    plt.xlabel("итерация")
-    plt.ylabel("макс. ошибка")
-    plt.grid(True)
-    plt.legend()
-    plt.show()
-
-    # ------------------ 5.2 3D-графики решений ------------------
-    # Подготовим 2D-сетки X,Y через meshgrid
-    X, Y = np.meshgrid(xA, yA)  
-    #  у нас: xA.shape=(nx,), yA.shape=(ny,) => X.shape=(ny,nx), Y.shape=(ny,nx).
-
-    # Функция для "транспонирования" решения (nx,ny)->(ny,nx)
-    def as_surface(u_2d):
-        return u_2d.T  # чтобы shape совпало с (ny,nx)
-
-    # 1) Аналитика
-    figA = plt.figure()
-    axA = figA.add_subplot(111, projection='3d')
-    surfA = axA.plot_surface(X, Y, as_surface(uA), cmap='viridis')
-    axA.set_title("Аналитическое решение: u(x,y)=y*sin(x)")
-    axA.set_xlabel("x")
-    axA.set_ylabel("y")
-    axA.set_zlabel("u")
-    figA.colorbar(surfA, shrink=0.5, aspect=10)
-    plt.show()
-
-    # 2) Якоби
-    figJ = plt.figure()
-    axJ = figJ.add_subplot(111, projection='3d')
-    surfJ = axJ.plot_surface(X, Y, as_surface(u_jacobi), cmap='plasma')
-    axJ.set_title("Численное решение (Якоби)")
-    axJ.set_xlabel("x")
-    axJ.set_ylabel("y")
-    axJ.set_zlabel("u")
-    figJ.colorbar(surfJ, shrink=0.5, aspect=10)
-    plt.show()
-
-    # 3) Зейдель
-    figS = plt.figure()
-    axS = figS.add_subplot(111, projection='3d')
-    surfS = axS.plot_surface(X, Y, as_surface(u_seidel), cmap='coolwarm')
-    axS.set_title("Численное решение (Зейдель)")
-    axS.set_xlabel("x")
-    axS.set_ylabel("y")
-    axS.set_zlabel("u")
-    figS.colorbar(surfS, shrink=0.5, aspect=10)
-    plt.show()
-
-    # 4) Релаксация
-    figR = plt.figure()
-    axR = figR.add_subplot(111, projection='3d')
-    surfR = axR.plot_surface(X, Y, as_surface(u_relax), cmap='inferno')
-    axR.set_title(f"Численное решение (SOR, theta={theta})")
-    axR.set_xlabel("x")
-    axR.set_ylabel("y")
-    axR.set_zlabel("u")
-    figR.colorbar(surfR, shrink=0.5, aspect=10)
-    plt.show()
-
-    # ------------------ 5.3 3D-график ошибки (например, метод Релаксации) ------------------
-    error_relax = np.abs(u_relax - uA)
-    figE = plt.figure()
-    axE = figE.add_subplot(111, projection='3d')
-    surfE = axE.plot_surface(X, Y, as_surface(error_relax), cmap='hot')
-    axE.set_title(f"Ошибка (метод Релаксации, theta={theta})")
-    axE.set_xlabel("x")
-    axE.set_ylabel("y")
-    axE.set_zlabel("|u - u_analytic|")
-    figE.colorbar(surfE, shrink=0.5, aspect=10)
-    plt.show()
+    plot_3d_surface(x_vals, y_vals, sol_relax, "Relaxation (w=1.5): u(x,y)")
+    error_relax = np.abs(sol_relax - u_exact)
+    plot_3d_surface(x_vals, y_vals, error_relax, "Error (Relaxation w=1.5)")
