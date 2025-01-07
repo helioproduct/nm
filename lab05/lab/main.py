@@ -174,8 +174,6 @@ def implicit(n, L, R, K, T, approx=1):
     return u
 
 
-
-
 def CN_method(n, L, R, K, T, approx=1, theta=0.5):
     u = np.zeros((K + 1, n + 1))
     tau = T / K
@@ -257,8 +255,12 @@ def CN_method(n, L, R, K, T, approx=1, theta=0.5):
     return u
 
 
+import matplotlib.pyplot as plt
+import numpy as np
+from math import sin, cos, pi
 
-
+# Функции и исходные данные остаются без изменений
+# ...
 
 if __name__ == "__main__":
 
@@ -274,7 +276,7 @@ if __name__ == "__main__":
     print("h = ", h)
     print("sigma = ", tau / (h * h))
 
-
+    # Вычисляем численные решения
     explicit_1 = explicit(n, L, R, K, T, approximation_type=1)
     explicit_2 = explicit(n, L, R, K, T, approximation_type=2)
     explicit_3 = explicit(n, L, R, K, T, approximation_type=3)
@@ -283,133 +285,86 @@ if __name__ == "__main__":
     implicit_2 = implicit(n, L, R, K, T, approx=2)
     implicit_3 = implicit(n, L, R, K, T, approx=3)
 
-    theta=0
+    theta = 0.5
     cn_1 = CN_method(n, L, R, K, T, approx=1, theta=theta)
     cn_2 = CN_method(n, L, R, K, T, approx=2, theta=theta)
     cn_3 = CN_method(n, L, R, K, T, approx=3, theta=theta)
 
-    # вычисление ошибок
-    tau = T / K
-    h = (R - L) / n
+    # Вычисление ошибок
     time_range = np.linspace(0, T, K + 1)
-    mae_u_explicit_1 = np.zeros(K + 1)
-    mae_u_explicit_2 = np.zeros(K + 1)
-   
-    mae_u_explicit_3 = np.zeros(K + 1)
-    mae_u_implicit_1 = np.zeros(K + 1)
-    mae_u_implicit_2 = np.zeros(K + 1)
-    mae_u_implicit_3 = np.zeros(K + 1)
-   
-    mae_u_crank_nicolson_1 = np.zeros(K + 1)
-    mae_u_crank_nicolson_2 = np.zeros(K + 1)
-    mae_u_crank_nicolson_3 = np.zeros(K + 1)
-
-    for k in range(K + 1):
-        analytical = np.array([u_real(time(k, tau), xi(L, i, h)) for i in range(n + 1)])
-        
-        mae_u_explicit_1[k] = np.mean(np.abs(explicit_1[k] - analytical))
-        mae_u_explicit_2[k] = np.mean(np.abs(explicit_2[k] - analytical))
-        mae_u_explicit_3[k] = np.mean(np.abs(explicit_3[k] - analytical))
-
-        mae_u_implicit_1[k] = np.mean(np.abs(implicit_1[k] - analytical))
-        mae_u_implicit_2[k] = np.mean(np.abs(implicit_2[k] - analytical))
-        mae_u_implicit_3[k] = np.mean(np.abs(implicit_3[k] - analytical))
     
+    def calculate_mae(numeric_solution):
+        mae = np.zeros(K + 1)
+        for k in range(K + 1):
+            analytical = np.array([u_real(time(k, tau), xi(L, i, h)) for i in range(n + 1)])
+            mae[k] = np.mean(np.abs(numeric_solution[k] - analytical))
+        return mae
 
-        mae_u_crank_nicolson_1[k] = np.mean(np.abs(cn_1[k] - analytical))
-        mae_u_crank_nicolson_2[k] = np.mean(np.abs(cn_2[k] - analytical))
-        mae_u_crank_nicolson_3[k] = np.mean(np.abs(cn_3[k] - analytical))
+    mae_explicit_1 = calculate_mae(explicit_1)
+    mae_explicit_2 = calculate_mae(explicit_2)
+    mae_explicit_3 = calculate_mae(explicit_3)
 
+    mae_implicit_1 = calculate_mae(implicit_1)
+    mae_implicit_2 = calculate_mae(implicit_2)
+    mae_implicit_3 = calculate_mae(implicit_3)
 
+    mae_cn_1 = calculate_mae(cn_1)
+    mae_cn_2 = calculate_mae(cn_2)
+    mae_cn_3 = calculate_mae(cn_3)
 
-    # Построение графика погрешности
-    plt.figure(figsize=(10, 5))
-    plt.plot(time_range, mae_u_explicit_1, label="Явная. 2т-ная. схема 1-го порядка")
-    plt.plot(time_range, mae_u_explicit_2, label="Явная 3т-ная схема 2-го порядка")
-    plt.plot(time_range, mae_u_explicit_3, label="Явная. 2т-ная схема 2-го порядка")
-    
-    plt.plot(time_range, mae_u_implicit_1, label="Неявная. 2т-ная. схема 1-го порядка")
-    plt.plot(time_range, mae_u_implicit_2, label="Неявн. 3т-ная схема 2-го порядка")
-    plt.plot(time_range, mae_u_implicit_3, label="Неявн. 2т-ная схема 2-го порядка")
-    
-    
-    plt.plot(time_range, mae_u_crank_nicolson_1, label="KN. 2т-ная. схема 1-го порядка")
-    plt.plot(time_range, mae_u_crank_nicolson_2, label="KN. 3т-ная схема 2-го порядка")
-    plt.plot(time_range, mae_u_crank_nicolson_3, label="KN. 2т-ная схема 2-го порядка")
+    # Построение графиков погрешностей
+    def plot_single_error(title, time_range, mae, label):
+        plt.figure(figsize=(10, 5))
+        plt.plot(time_range, mae, label=label)
+        plt.xlabel('t')
+        plt.ylabel('Средняя абсолютная ошибка')
+        plt.title(title)
+        plt.axhline(0, color='black', linewidth=1)
+        plt.axvline(0, color='black', linewidth=1)
+        plt.legend()
+        plt.grid()
+        plt.show()
 
-    plt.xlabel('t')
-    plt.ylabel('mae(u(x, t), U(x, t))')
-  
-    plt.title('Прогрешности t')
-    plt.axhline(0, color='black', linewidth=1)
-    plt.axvline(0, color='black', linewidth=1)
-    plt.legend()
-    plt.grid()
-    plt.show()
+    # Построение графиков для каждой погрешности отдельно
+    plot_single_error("Явная конечно-разностная схема: 2т-ная 1-го порядка", time_range, mae_explicit_1, "2т-ная 1-го порядка")
+    plot_single_error("Явная конечно-разностная схема: 3т-ная 2-го порядка", time_range, mae_explicit_2, "3т-ная 2-го порядка")
+    plot_single_error("Явная конечно-разностная схема: 2т-ная 2-го порядка", time_range, mae_explicit_3, "2т-ная 2-го порядка")
 
+    plot_single_error("Неявная конечно-разностная схема: 2т-ная 1-го порядка", time_range, mae_implicit_1, "2т-ная 1-го порядка")
+    plot_single_error("Неявная конечно-разностная схема: 3т-ная 2-го порядка", time_range, mae_implicit_2, "3т-ная 2-го порядка")
+    plot_single_error("Неявная конечно-разностная схема: 2т-ная 2-го порядка", time_range, mae_implicit_3, "2т-ная 2-го порядка")
 
+    plot_single_error("Схема Кранка-Николсона: 2т-ная 1-го порядка", time_range, mae_cn_1, "2т-ная 1-го порядка")
+    plot_single_error("Схема Кранка-Николсона: 3т-ная 2-го порядка", time_range, mae_cn_2, "3т-ная 2-го порядка")
+    plot_single_error("Схема Кранка-Николсона: 2т-ная 2-го порядка", time_range, mae_cn_3, "2т-ная 2-го порядка")
 
+    # Построение графиков численных решений отдельно
     time_index = 5000
     x = np.linspace(L, R, n + 1)
-
-    plt.figure(figsize=(10, 5))
     current_time = time(time_index, tau)
     u_analytic_values = [u_real(current_time, xi(L, i, h)) for i in range(n + 1)]
-    
-    
-    u_explicit_1_values = [explicit_1[time_index][i] for i in range(n + 1)]
-    u_explicit_2_values = [explicit_2[time_index][i] for i in range(n + 1)]
-    u_explicit_3_values = [explicit_3[time_index][i] for i in range(n + 1)]
-    
-    u_implicit_1_values = [implicit_1[time_index][i] for i in range(n + 1)]
-    u_implicit_2_values = [implicit_2[time_index][i] for i in range(n + 1)]
-    u_implicit_3_values = [implicit_3[time_index][i] for i in range(n + 1)]
-    
-    u_crank_nicolson_1_values = [cn_1[time_index][i] for i in range(n + 1)]
-    u_crank_nicolson_2_values = [cn_2[time_index][i] for i in range(n + 1)]
-    u_crank_nicolson_3_values = [cn_3[time_index][i] for i in range(n + 1)]
 
+    def plot_single_solution(title, x, analytical, numeric_solution, label):
+        plt.figure(figsize=(10, 5))
+        plt.plot(x, analytical, label='Аналитическое решение')
+        plt.plot(x, numeric_solution, label=label)
+        plt.xlabel('x')
+        plt.ylabel('u(x, t)')
+        plt.title(title)
+        plt.axhline(0, color='black', linewidth=1)
+        plt.axvline(0, color='black', linewidth=1)
+        plt.legend()
+        plt.grid()
+        plt.show()
 
-    print("max abs error explicit 1", max_abs_error(u_explicit_1_values, u_analytic_values))
-    print("max abs error explicit 2", max_abs_error(u_explicit_2_values, u_analytic_values))
-    print("max abs error explicit 3", max_abs_error(u_explicit_3_values, u_analytic_values))
+    plot_single_solution("Явная конечно-разностная схема: 2т-ная 1-го порядка", x, u_analytic_values, explicit_1[time_index], "2т-ная 1-го порядка")
+    plot_single_solution("Явная конечно-разностная схема: 3т-ная 2-го порядка", x, u_analytic_values, explicit_2[time_index], "3т-ная 2-го порядка")
+    plot_single_solution("Явная конечно-разностная схема: 2т-ная 2-го порядка", x, u_analytic_values, explicit_3[time_index], "2т-ная 2-го порядка")
 
+    plot_single_solution("Неявная конечно-разностная схема: 2т-ная 1-го порядка", x, u_analytic_values, implicit_1[time_index], "2т-ная 1-го порядка")
+    plot_single_solution("Неявная конечно-разностная схема: 3т-ная 2-го порядка", x, u_analytic_values, implicit_2[time_index], "3т-ная 2-го порядка")
+    plot_single_solution("Неявная конечно-разностная схема: 2т-ная 2-го порядка", x, u_analytic_values, implicit_3[time_index], "2т-ная 2-го порядка")
 
-    print("max abs error implicit 1", max_abs_error(u_implicit_1_values, u_analytic_values))
-    print("max abs error implicit 2", max_abs_error(u_implicit_2_values, u_analytic_values))
-    print("max abs error implicit 3", max_abs_error(u_implicit_3_values, u_analytic_values))
-
-
-    print("max abs error CN1", max_abs_error(u_crank_nicolson_1_values, u_analytic_values))
-    print("max abs error CN2", max_abs_error(u_crank_nicolson_2_values, u_analytic_values))
-    print("max abs error CN3", max_abs_error(u_crank_nicolson_3_values, u_analytic_values))
-
-
-
-
-    plt.plot(x, u_analytic_values, label=f'Аналитическое, t = {current_time}')
-
-    plt.plot(x, u_explicit_1_values, label=f'Явн. 2т. 1, t = {current_time}')
-    plt.plot(x, u_explicit_2_values, label=f'Явн. 3т. 2, t = {current_time}')
-    plt.plot(x, u_explicit_3_values, label=f'Явн. 2т. 2, t = {current_time}')
-
-    plt.plot(x, u_implicit_1_values, label=f'неявн. 1т. 2, t = {current_time}')
-    plt.plot(x, u_implicit_2_values, label=f'неявн. 2т. 2, t = {current_time}')
-    plt.plot(x, u_implicit_3_values, label=f'неявн. 2т. 3, t = {current_time}')
-
-    plt.plot(x, u_crank_nicolson_1_values, label="CN. 2т-ная. схема 1-го порядка")
-    plt.plot(x, u_crank_nicolson_2_values, label="CN. 3т-ная схема 2-го порядка")
-    plt.plot(x, u_crank_nicolson_3_values, label="CN. 2т-ная схема 2-го порядка")
-
-
-    plt.xlabel('x')
-    plt.ylabel('u(x, t)')
-    plt.title('Сравнение аналитического и численных решений')
-    plt.xticks(ticks=[0, pi/4, pi/2], labels=['0', r'$\frac{\pi}{4}$', r'$\frac{\pi}{2}$'])
-    plt.axhline(0, color='black', linewidth=1)
-    plt.axvline(0, color='black', linewidth=1)
-    plt.legend()
-    plt.grid()
-    plt.show()
-
-
+    plot_single_solution("Схема Кранка-Николсона: 2т-ная 1-го порядка", x, u_analytic_values, cn_1[time_index], "2т-ная 1-го порядка")
+    plot_single_solution("Схема Кранка-Николсона: 3т-ная 2-го порядка", x, u_analytic_values, cn_2[time_index], "3т-ная 2-го порядка")
+    plot_single_solution("Схема Кранка-Николсона: 2т-ная 2-го порядка", x, u_analytic_values, cn_3[time_index], "2т-ная 2-го порядка")

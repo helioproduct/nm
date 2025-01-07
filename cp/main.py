@@ -22,7 +22,8 @@ def robust_spline_smoothing(data, smoothing_param):
 
     # Формируем диагональную матрицу Γ
     n = len(dct_data)
-    gamma = np.array([1 / (1 + smoothing_param * (2 - 2 * np.cos(np.pi * i / n))) for i in range(n)])
+    gamma = np.array([1 / (1 + smoothing_param * (2 - 2 * np.cos(np.pi * i / n))) 
+                      for i in range(n)])
 
     smoothed_dct = dct_data * gamma
     smoothed_data = idct(smoothed_dct, type=2, norm='ortho')
@@ -38,15 +39,19 @@ if __name__ == "__main__":
 
     smoothing_param = 100
 
-    spline = get_robust_spline_function(x, y, smoothing_param)
+    params = [0, 0.5, 0.75, 1, 5, 10]
 
-    new_x = np.linspace(0, 2 * np.pi, 500)
-    interpolated_y = spline(new_x)
+    for p in params:
+        spline = get_robust_spline_function(x, y, p)
+        new_x = np.linspace(0, 2 * np.pi, 500)
+        interpolated_y = spline(new_x)
 
+        plt.figure(figsize=(25,9))
 
-    plt.scatter(x, y, label="Данные с выбросами", color="blue", alpha=0.7)
-    plt.plot(new_x, interpolated_y, label="Интерполяция сплайна", color="purple", linestyle="--")
-    plt.plot(x, np.sin(x), label="Оригинальная функция", color="green", linestyle="--")
-    plt.title("Робастное сглаживание и сплайн-интерполяция")
-    plt.legend()
-    plt.show()
+        plt.scatter(x, y, label="Данные с выбросами", color="blue", alpha=0.7)
+      
+        plt.plot(new_x, interpolated_y, label="Интерполяция сплайна", color="purple", linestyle="--")
+        plt.plot(x, np.sin(x), label="Оригинальная функция", color="green", linestyle="--")
+        plt.title(f"Робастное сглаживание и сплайн-интерполяция, s={p}")
+        plt.legend()
+        plt.show()
