@@ -277,8 +277,8 @@ if __name__ == "__main__":
         mae_mdsh.append(np.mean(diff_mdsh))
 
     plt.figure(figsize=(7,5))
-    plt.plot(t_arr, mae_mpn,  label="МПН (MAE)")    
-    plt.plot(t_arr, mae_mdsh, label="МДШ (MAE)")
+    plt.plot(t_arr, mae_mpn,  label="МДШ (MAE)")    
+    plt.plot(t_arr, mae_mdsh, label="МПН (MAE)")
     plt.xlabel("t")
     plt.ylabel("Средняя абсолютная ошибка")
     plt.title("Сравнение ошибок МПН и МДШ")
