@@ -6,9 +6,9 @@ def L2_norm(vec: np.ndarray):
     return np.sqrt(np.sum(vec*vec))
 
 def iterative(A, b, eps):
-    """
-    Метод Якоби (простых итераций).
-    """
+    '''
+    метод простых итераций
+    '''
     n = A.shape[0]
     alpha = np.zeros_like(A, dtype=float)
     beta  = np.zeros(n, dtype=float)
@@ -192,10 +192,10 @@ if __name__=="__main__":
         method=iterative,
         eps=eps
     )
-    print("[Jacobi] iters =", it_jacobi)
+    print("[Метод релаксации] iters =", it_jacobi)
     def max_abs_error(A, B):
         return np.max(np.abs(A - B))
-    print("[Jacobi] max_error =", max_abs_error(sol_jacobi, u_exact))
+    print("[Метод релаксации] max_error =", max_abs_error(sol_jacobi, u_exact))
 
     #--- (2) Зейдель
     sol_seidel, it_seid, _, _ = finite_difference_schema_mixed(
@@ -232,13 +232,13 @@ if __name__=="__main__":
         plt.colorbar(surf, shrink=0.5, aspect=10)
         plt.show()
 
-    plot_3d_surface(x_vals, y_vals, u_exact, "Analytical solution (if valid)")
+    plot_3d_surface(x_vals, y_vals, u_exact, "Analytical solution")
 
-    plot_3d_surface(x_vals, y_vals, sol_jacobi, "Jacobi method")
-    plot_3d_surface(x_vals, y_vals, np.abs(sol_jacobi - u_exact), "Error (Jacobi)")
+    plot_3d_surface(x_vals, y_vals, sol_jacobi, "метод простых итераций")
+    plot_3d_surface(x_vals, y_vals, np.abs(sol_jacobi - u_exact), "Error (метод простых итераций)")
 
     plot_3d_surface(x_vals, y_vals, sol_seidel, "Seidel method")
     plot_3d_surface(x_vals, y_vals, np.abs(sol_seidel - u_exact), "Error (Seidel)")
 
-    plot_3d_surface(x_vals, y_vals, sol_relax, "SOR (w=1.5)")
-    plot_3d_surface(x_vals, y_vals, np.abs(sol_relax - u_exact), "Error (SOR w=1.5)")
+    plot_3d_surface(x_vals, y_vals, sol_relax, "Метод релаксации w=1.5")
+    plot_3d_surface(x_vals, y_vals, np.abs(sol_relax - u_exact), "Error (Метод релаксации w=1.5)")
